@@ -1,0 +1,913 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Der Wiesenpfad 3D - Das Abenteuer des Regenbogenhasen</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Three.js CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- OrbitControls -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+            background-color: #0b132b;
+            touch-action: manipulation;
+        }
+        #canvas-container {
+            width: 100vw;
+            height: 100vh;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.88);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+        }
+        .glass-btn {
+            background: rgba(30, 41, 59, 0.75);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.15s ease-in-out;
+        }
+        .glass-btn:active {
+            transform: scale(0.92);
+            background: rgba(16, 185, 129, 0.5);
+        }
+        .rainbow-glow {
+            box-shadow: 0 0 18px rgba(236, 72, 153, 0.6), 0 0 32px rgba(14, 165, 233, 0.4);
+        }
+        .pulse-hint {
+            animation: pulseGlow 1.8s infinite;
+        }
+        @keyframes pulseGlow {
+            0%, 100% { transform: scale(1); opacity: 0.95; }
+            50% { transform: scale(1.04); opacity: 1; filter: drop-shadow(0 0 12px rgba(251, 191, 36, 0.8)); }
+        }
+        /* Custom Mobile Landscape Adjustments */
+        @media (max-height: 500px) {
+            .compact-landscape-hide { display: none !important; }
+            .compact-landscape-scale { transform: scale(0.85); transform-origin: bottom left; }
+            .compact-landscape-scale-right { transform: scale(0.85); transform-origin: bottom right; }
+        }
+    </style>
+</head>
+<body class="text-slate-100">
+
+    <!-- 3D WebGL Canvas Container -->
+    <div id="canvas-container"></div>
+
+    <!-- UI Overlay Layer -->
+    <div class="relative z-10 flex flex-col justify-between h-screen p-2 md:p-4 pointer-events-none">
+        
+        <!-- Top HUD Bar -->
+        <header class="flex justify-between items-center w-full max-w-5xl mx-auto glass-panel rounded-2xl px-3 py-2 pointer-events-auto shadow-2xl">
+            <!-- Hero Info & Stats -->
+            <div class="flex items-center space-x-2.5">
+                <div class="w-10 h-10 md:w-11 md:h-11 rounded-2xl bg-gradient-to-tr from-pink-500 via-purple-500 to-indigo-500 flex items-center justify-center text-xl md:text-2xl shadow-lg border border-white/40 rainbow-glow">
+                    👑
+                </div>
+                <div>
+                    <div class="flex items-center space-x-1.5">
+                        <h1 class="font-black text-xs md:text-sm text-transparent bg-clip-text bg-gradient-to-r from-pink-400 via-amber-300 to-emerald-400">
+                            Prinz Regenbogenhase
+                        </h1>
+                        <span class="text-[9px] bg-emerald-950 text-emerald-400 border border-emerald-500/40 px-1.5 py-0.2 rounded-full font-bold">Lvl 1</span>
+                    </div>
+                    <!-- Innere Ruhe Balken -->
+                    <div class="flex items-center space-x-2 mt-0.5">
+                        <span class="text-[9px] md:text-[10px] text-slate-300 font-semibold">Ruhe:</span>
+                        <div class="w-20 md:w-32 h-2 bg-slate-800 rounded-full overflow-hidden border border-slate-700">
+                            <div id="peace-bar" class="h-full bg-gradient-to-r from-emerald-400 to-cyan-400 w-full transition-all duration-300"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stars, Friendship & Settings -->
+            <div class="flex items-center space-x-1.5 md:space-x-2">
+                <!-- Freundschafts-Punkte -->
+                <div class="flex items-center space-x-1 bg-slate-800/90 px-2.5 py-1 rounded-xl border border-pink-500/30 text-xs font-bold text-pink-300">
+                    <span class="text-xs">❤️</span>
+                    <span id="friend-count">0</span>
+                </div>
+                <!-- Sterne -->
+                <div class="flex items-center space-x-1 bg-slate-800/90 px-2.5 py-1 rounded-xl border border-amber-500/30 text-xs font-bold text-amber-300">
+                    <i data-lucide="star" class="w-3.5 h-3.5 fill-amber-400 text-amber-400"></i>
+                    <span id="star-count">0 / 3</span>
+                </div>
+                <button id="sound-btn" class="p-1.5 rounded-xl glass-btn text-slate-200">
+                    <i data-lucide="volume-2" class="w-4 h-4"></i>
+                </button>
+                <button id="info-btn" class="p-1.5 rounded-xl glass-btn text-slate-200">
+                    <i data-lucide="book-open" class="w-4 h-4"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- Dynamic Proximity Interagieren Prompt (Appears when close to animals/items) -->
+        <div id="proximity-prompt" class="mx-auto my-auto pointer-events-auto hidden transition-all duration-300">
+            <button id="btn-proximity-interact" class="px-5 py-2.5 rounded-2xl bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 text-white font-black text-xs md:text-sm shadow-2xl border border-amber-300/50 flex items-center space-x-2 pulse-hint">
+                <i data-lucide="sparkles" class="w-4 h-4 text-amber-200 animate-spin"></i>
+                <span id="proximity-text">Interagieren [E / AKTION]</span>
+            </button>
+        </div>
+
+        <!-- Optimized Non-Blocking Dialogue Modal (Top/Bottom Anchored) -->
+        <div id="dialogue-box" class="w-full max-w-2xl mx-auto glass-panel rounded-2xl p-3 md:p-4 pointer-events-auto shadow-2xl transition-all duration-300 my-1 border border-pink-500/30">
+            <div class="flex items-start space-x-3">
+                <!-- Avatar -->
+                <div id="speaker-avatar" class="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-slate-800 border border-emerald-500/40 flex items-center justify-center text-xl md:text-2xl shrink-0 shadow-lg">
+                    🐰
+                </div>
+
+                <!-- Text & Dynamic Choice Content -->
+                <div class="flex-1">
+                    <div class="flex justify-between items-center mb-0.5">
+                        <span id="speaker-name" class="font-bold text-pink-400 text-xs md:text-sm">Prinz Regenbogenhase</span>
+                        <span id="dialogue-tag" class="text-[9px] uppercase tracking-wider text-slate-300 bg-slate-800 px-2 py-0.5 rounded-full border border-slate-700">Mission</span>
+                    </div>
+                    <p id="dialogue-text" class="text-slate-200 text-xs md:text-sm leading-relaxed min-h-[2.5rem]">
+                        "Willkommen auf dem Wiesenpfad! Hoppele mit dem D-Pad oder WASD zum traurigen Igelbau."
+                    </p>
+
+                    <!-- Branching Choice Buttons (Hidden by default, shown during decisions) -->
+                    <div id="dialogue-choices" class="mt-2 hidden space-y-1.5">
+                        <!-- Choice buttons populated via JS -->
+                    </div>
+
+                    <!-- Regular Next Button Footer -->
+                    <div id="dialogue-footer" class="mt-2 flex justify-between items-center pt-1.5 border-t border-slate-800/80">
+                        <span id="step-counter" class="text-[10px] text-slate-400 font-medium">Station 1: Der Igelbau</span>
+                        <button id="next-btn" class="px-4 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 font-bold text-xs text-white flex items-center space-x-1.5 transition shadow-lg shadow-emerald-900/30">
+                            <span>Weiter</span>
+                            <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Touch Controller HUD for Mobile & Desktop -->
+        <div class="w-full max-w-5xl mx-auto flex justify-between items-end pointer-events-auto pb-1 px-1">
+            
+            <!-- Virtual D-Pad / Touch Joystick -->
+            <div class="relative w-28 h-28 md:w-36 md:h-36 bg-slate-900/80 rounded-full border border-slate-700/80 backdrop-blur-md flex items-center justify-center p-1 shadow-2xl compact-landscape-scale">
+                <button id="btn-up" class="absolute top-1 w-9 h-9 md:w-11 md:h-11 glass-btn rounded-xl flex items-center justify-center text-slate-200">
+                    <i data-lucide="chevron-up" class="w-5 h-5"></i>
+                </button>
+                <button id="btn-down" class="absolute bottom-1 w-9 h-9 md:w-11 md:h-11 glass-btn rounded-xl flex items-center justify-center text-slate-200">
+                    <i data-lucide="chevron-down" class="w-5 h-5"></i>
+                </button>
+                <button id="btn-left" class="absolute left-1 w-9 h-9 md:w-11 md:h-11 glass-btn rounded-xl flex items-center justify-center text-slate-200">
+                    <i data-lucide="chevron-left" class="w-5 h-5"></i>
+                </button>
+                <button id="btn-right" class="absolute right-1 w-9 h-9 md:w-11 md:h-11 glass-btn rounded-xl flex items-center justify-center text-slate-200">
+                    <i data-lucide="chevron-right" class="w-5 h-5"></i>
+                </button>
+                <div class="w-7 h-7 rounded-full bg-slate-800 border border-slate-600 flex items-center justify-center text-[9px] text-slate-400 font-bold">
+                    PAD
+                </div>
+            </div>
+
+            <!-- Keyboard Quick-Hint for Desktop -->
+            <div class="hidden md:flex flex-col items-center bg-slate-900/85 px-3 py-1.5 rounded-xl border border-slate-800 text-[10px] text-slate-400">
+                <span>Steuerung: <strong class="text-amber-300">W A S D / Pfeile</strong></span>
+                <span>Hoppeln: <strong class="text-amber-300">LEERTASTE</strong> | Aktion: <strong class="text-amber-300">E</strong></span>
+            </div>
+
+            <!-- Action Gaming Buttons -->
+            <div class="flex space-x-2 items-center compact-landscape-scale-right">
+                <!-- Action / Interact Button -->
+                <button id="btn-action" class="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-gradient-to-tr from-amber-500 to-amber-600 active:from-amber-600 text-white font-black shadow-xl border border-amber-300/40 flex flex-col items-center justify-center text-xs">
+                    <i data-lucide="hand" class="w-5 h-5 mb-0.5"></i>
+                    <span class="text-[8px]">Aktion</span>
+                </button>
+                <!-- Hop / Jump Button -->
+                <button id="btn-hop" class="w-14 h-14 md:w-16 md:h-16 rounded-2xl bg-gradient-to-tr from-pink-500 to-purple-600 active:from-pink-600 text-white font-black shadow-2xl border border-pink-300/40 flex flex-col items-center justify-center text-xs rainbow-glow">
+                    <i data-lucide="sparkles" class="w-6 h-6 mb-0.5"></i>
+                    <span class="text-[9px] tracking-wider">HOPP!</span>
+                </button>
+            </div>
+
+        </div>
+
+        <!-- Minigame Modal Overlay ("Das Ruhe-Schutzschild") -->
+        <div id="minigame-modal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-50 flex items-center justify-center p-3 hidden pointer-events-auto">
+            <div class="max-w-lg w-full glass-panel border border-emerald-500/40 rounded-3xl p-4 md:p-6 shadow-2xl text-center relative">
+                <button id="close-minigame" class="absolute top-3 right-3 p-1.5 text-slate-400 hover:text-white rounded-full bg-slate-800">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
+
+                <div class="flex justify-center items-center space-x-2 mb-2">
+                    <span class="text-2xl">🐝</span>
+                    <h2 class="text-base md:text-lg font-bold text-transparent bg-clip-text bg-gradient-to-r from-emerald-300 via-amber-300 to-pink-400">
+                        Minispiel: Das Ruhe-Schutzschild
+                    </h2>
+                </div>
+                <p class="text-xs text-slate-300 mb-4">
+                    Klicke/Tappe schnell auf die <strong class="text-emerald-400">grünen Schutz-Blüten</strong>, um das Ruhe-Schild vor dem Bienenstock aufzubauen & den Lärm zu stoppen!
+                </p>
+
+                <!-- Minigame Play Area Canvas -->
+                <div id="minigame-box" class="relative w-full h-48 md:h-56 bg-slate-900/90 rounded-2xl border border-slate-700 overflow-hidden mb-4 flex items-center justify-center">
+                    <div id="shield-progress-circle" class="w-24 h-24 rounded-full border-4 border-dashed border-emerald-400/40 flex items-center justify-center text-3xl transition-all duration-300">
+                        🛡️
+                    </div>
+                    <!-- Dynamic spawned minigame target items -->
+                    <div id="minigame-targets" class="absolute inset-0 pointer-events-auto"></div>
+                </div>
+
+                <!-- Minigame Score Bar -->
+                <div class="flex justify-between items-center bg-slate-900/80 px-4 py-2 rounded-xl border border-slate-800 text-xs">
+                    <span class="text-slate-400">Schutz-Schild Kraft:</span>
+                    <span id="minigame-score" class="font-bold text-emerald-400 text-sm">0 / 5 Blüten</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Educational Info Card Overlay -->
+        <div id="edu-card" class="fixed inset-0 bg-slate-950/85 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden pointer-events-auto">
+            <div class="max-w-xl w-full glass-panel border border-pink-500/40 rounded-3xl p-5 shadow-2xl relative max-h-[90vh] overflow-y-auto">
+                <button id="close-edu" class="absolute top-4 right-4 p-2 text-slate-400 hover:text-white rounded-full bg-slate-800">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+
+                <div class="flex items-center space-x-3 mb-3">
+                    <div class="w-11 h-11 rounded-2xl bg-gradient-to-tr from-amber-400 to-pink-500 flex items-center justify-center text-2xl text-white shadow-lg">
+                        📖
+                    </div>
+                    <div>
+                        <h2 class="text-base md:text-lg font-bold text-transparent bg-clip-text bg-gradient-to-r from-amber-300 to-pink-400">
+                            Aufklärung: Der Wiesenpfad - Handbuch
+                        </h2>
+                        <p class="text-xs text-slate-400">Grenzziehung, Stalking-Schutz & innere Gelassenheit</p>
+                    </div>
+                </div>
+
+                <div class="space-y-2.5 text-xs md:text-sm text-slate-300 leading-relaxed my-3">
+                    <div class="p-3 bg-slate-900/80 rounded-2xl border border-slate-800">
+                        <strong class="text-amber-300 block mb-0.5">1. Körpersignale wahrnehmen:</strong>
+                        Wenn Herzrasen oder Bauchweh auftreten, ist das ein Signal für Überforderung. Ziehe dich in deine persönliche Schutzzone zurück.
+                    </div>
+                    <div class="p-3 bg-slate-900/80 rounded-2xl border border-slate-800">
+                        <strong class="text-pink-400 block mb-0.5">2. Schwarm-Effekt (Hive-Mind) durchbrechen:</strong>
+                        Lärm oder Gerüchte von Gruppen nicht nachplappern. Jeder hat das Recht auf seine eigene, ruhige Wahrnehmung.
+                    </div>
+                    <div class="p-3 bg-slate-900/80 rounded-2xl border border-slate-800">
+                        <strong class="text-emerald-400 block mb-0.5">3. Keine Provokation & Beweise sichern:</strong>
+                        Statt den Störer direkt zu konfrontieren, Ruhe bewahren, Grenzen setzen und Protokoll/Beweise mit vertrauten Personen (Eule) sammeln.
+                    </div>
+                </div>
+
+                <button id="restart-demo" class="w-full py-2.5 bg-gradient-to-r from-pink-600 to-purple-600 font-bold rounded-xl text-white text-xs md:text-sm transition shadow-lg">
+                    Neustart / Weiter erkunden
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- JavaScript Game Logic -->
+    <script>
+        lucide.createIcons();
+
+        // Game Engine Global Variables
+        let scene, camera, renderer;
+        let bunnyGroup, crownMesh, owlGroup, hedgehogGroup, foxGroup, hiveGroup, trapMesh;
+        let particles = [], beeParticles = [];
+        let hitRings = {}; // 3D Interactive Hitbox rings
+        
+        let keyState = { up: false, down: false, left: false, right: false };
+        let bunnyPos = { x: 0, z: 4, rot: 0 };
+        let bunnyVelocityY = 0;
+        let isHopping = false;
+        let peaceLevel = 100;
+        let starsCollected = 0;
+        let friendshipPoints = 0;
+        let soundEnabled = true;
+        let currentNearbyEntity = null;
+        let activeStoryStep = "start";
+
+        // Synthesized Web Audio Sound Effects
+        const AudioFX = {
+            ctx: null,
+            init() {
+                if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+            },
+            playHop() {
+                if (!soundEnabled) return;
+                this.init();
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(260, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(620, this.ctx.currentTime + 0.14);
+                gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.14);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.14);
+            },
+            playCollect() {
+                if (!soundEnabled) return;
+                this.init();
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(523.25, this.ctx.currentTime);
+                osc.frequency.setValueAtTime(659.25, this.ctx.currentTime + 0.08);
+                osc.frequency.setValueAtTime(783.99, this.ctx.currentTime + 0.16);
+                gain.gain.setValueAtTime(0.25, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.3);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.3);
+            },
+            playSuccess() {
+                if (!soundEnabled) return;
+                this.init();
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(440, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(880, this.ctx.currentTime + 0.25);
+                gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.3);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.3);
+            }
+        };
+
+        // Story Data & Dialogue Branching
+        const storySteps = {
+            start: {
+                speaker: "Prinz Regenbogenhase 👑",
+                avatar: "🐰",
+                color: "text-pink-400",
+                tag: "Start",
+                text: "Hallo lieber Wiesenfreund! Hoppele nach vorne zum zitternden Igelbau. Wir helfen dem Igel gemeinsam!",
+                choices: null
+            },
+            hedgehog_trap: {
+                speaker: "Erschöpfter Igel 🦔",
+                avatar: "🦔",
+                color: "text-amber-400",
+                tag: "Igelbau",
+                text: "Oh Prinz Regenbogenhase! Vor meiner Tür steht eine laute Lärmdose. Der Schattenfuchs lärmt nachts. Ich traue mich nicht heraus!",
+                choices: [
+                    {
+                        label: "1. Lärmdose entfernen & Igel beruhigen ❤️",
+                        action: () => removeHedgehogTrap()
+                    },
+                    {
+                        label: "2. Dem Fuchs hinterherbrüllen",
+                        action: () => badHedgehogChoice()
+                    }
+                ]
+            },
+            hive_quest: {
+                speaker: "Sorgsame Biene 🐝",
+                avatar: "🐝",
+                color: "text-amber-300",
+                tag: "Bienenstock",
+                text: "Achtung! Der Schattenfuchs hat Gerüchte gestreut. Der ganze Wespenschwarm summt in Panik durcheinander!",
+                choices: [
+                    {
+                        label: "Starte Minispiel: 'Ruhe-Schutzschild bauen' 🛡️",
+                        action: () => startShieldMinigame()
+                    }
+                ]
+            },
+            owl_wisdom: {
+                speaker: "Weise Eule 🦉",
+                avatar: "🦉",
+                color: "text-emerald-400",
+                tag: "Erkenntnis",
+                text: "Wundervoll gelöst! Du hast gelernt: Gegen Lärm hilft Eigenschutz, und gegen Schwarm-Mobbing hilft innere Ruhe & Grenzen setzen!",
+                choices: null
+            }
+        };
+
+        // 3D Scene Initialization
+        function init3D() {
+            const container = document.getElementById('canvas-container');
+
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x0b132b);
+            scene.fog = new THREE.FogExp2(0x0b132b, 0.022);
+
+            camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
+            camera.position.set(0, 6, 11);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            container.appendChild(renderer.domElement);
+
+            // Ambient & Sun Lighting
+            const ambient = new THREE.AmbientLight(0x60a5fa, 0.65);
+            scene.add(ambient);
+
+            const sun = new THREE.DirectionalLight(0xfef08a, 1.2);
+            sun.position.set(8, 12, 6);
+            sun.castShadow = true;
+            sun.shadow.mapSize.width = 1024;
+            sun.shadow.mapSize.height = 1024;
+            scene.add(sun);
+
+            // Build Terrain & Entities
+            buildTerrain();
+            createRegenbogenhase();
+            createOwl();
+            createHedgehog();
+            createHiveTree();
+            createShadowFox();
+            createTrapItem();
+            createFriendshipFlowers();
+
+            setupControls();
+            window.addEventListener('resize', onWindowResize);
+
+            animate();
+        }
+
+        function buildTerrain() {
+            // Island Base
+            const islandGeo = new THREE.CylinderGeometry(14, 15, 1.5, 36);
+            const islandMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.8 });
+            const island = new THREE.Mesh(islandGeo, islandMat);
+            island.position.y = -0.75;
+            island.receiveShadow = true;
+            scene.add(island);
+
+            // Grass Layer
+            const grassGeo = new THREE.CylinderGeometry(13.8, 14, 0.2, 36);
+            const grassMat = new THREE.MeshStandardMaterial({ color: 0x065f46, roughness: 0.7 });
+            const grass = new THREE.Mesh(grassGeo, grassMat);
+            grass.position.y = 0.05;
+            grass.receiveShadow = true;
+            scene.add(grass);
+        }
+
+        function createRegenbogenhase() {
+            bunnyGroup = new THREE.Group();
+
+            // Body
+            const bodyGeo = new THREE.SphereGeometry(0.55, 16, 16);
+            bodyGeo.scale(1, 0.9, 1.1);
+            const bunnyMat = new THREE.MeshStandardMaterial({ color: 0xf472b6, roughness: 0.3 });
+            const body = new THREE.Mesh(bodyGeo, bunnyMat);
+            body.position.y = 0.55;
+            body.castShadow = true;
+            bunnyGroup.add(body);
+
+            // Head
+            const headGeo = new THREE.SphereGeometry(0.4, 16, 16);
+            const head = new THREE.Mesh(headGeo, bunnyMat);
+            head.position.set(0, 1.05, 0.2);
+            head.castShadow = true;
+            bunnyGroup.add(head);
+
+            // Crown 👑
+            const crownGeo = new THREE.CylinderGeometry(0.22, 0.15, 0.25, 6);
+            const crownMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, metalness: 0.8, roughness: 0.2 });
+            crownMesh = new THREE.Mesh(crownGeo, crownMat);
+            crownMesh.position.set(0, 1.45, 0.2);
+            bunnyGroup.add(crownMesh);
+
+            // Ears
+            const earGeo = new THREE.CylinderGeometry(0.08, 0.05, 0.7, 8);
+            const earMat = new THREE.MeshStandardMaterial({ color: 0xec4899 });
+            
+            const leftEar = new THREE.Mesh(earGeo, earMat);
+            leftEar.position.set(-0.15, 1.5, 0.1);
+            leftEar.rotation.z = -0.2;
+            bunnyGroup.add(leftEar);
+
+            const rightEar = new THREE.Mesh(earGeo, earMat);
+            rightEar.position.set(0.15, 1.5, 0.1);
+            rightEar.rotation.z = 0.2;
+            bunnyGroup.add(rightEar);
+
+            bunnyGroup.position.set(bunnyPos.x, 0, bunnyPos.z);
+            scene.add(bunnyGroup);
+        }
+
+        function create3DHitRing(x, z, colorHex) {
+            const ringGeo = new THREE.RingGeometry(1.2, 1.4, 32);
+            ringGeo.rotateX(-Math.PI / 2);
+            const ringMat = new THREE.MeshBasicMaterial({ color: colorHex, side: THREE.DoubleSide, transparent: true, opacity: 0.6 });
+            const ring = new THREE.Mesh(ringGeo, ringMat);
+            ring.position.set(x, 0.1, z);
+            scene.add(ring);
+            return ring;
+        }
+
+        function createHedgehog() {
+            hedgehogGroup = new THREE.Group();
+            const bodyGeo = new THREE.SphereGeometry(0.45, 12, 12);
+            bodyGeo.scale(1, 0.8, 1.2);
+            const bodyMat = new THREE.MeshStandardMaterial({ color: 0xb45309 });
+            const body = new THREE.Mesh(bodyGeo, bodyMat);
+            body.position.y = 0.35;
+            hedgehogGroup.add(body);
+
+            hedgehogGroup.position.set(3.5, 0, 1);
+            scene.add(hedgehogGroup);
+
+            hitRings.hedgehog = create3DHitRing(3.5, 1, 0xf59e0b);
+        }
+
+        function createHiveTree() {
+            const treeGroup = new THREE.Group();
+            const trunkGeo = new THREE.CylinderGeometry(0.4, 0.6, 3, 8);
+            const trunkMat = new THREE.MeshStandardMaterial({ color: 0x451a03 });
+            const trunk = new THREE.Mesh(trunkGeo, trunkMat);
+            trunk.position.y = 1.5;
+            treeGroup.add(trunk);
+
+            const leafGeo = new THREE.DodecahedronGeometry(1.6);
+            const leafMat = new THREE.MeshStandardMaterial({ color: 0x047857 });
+            const canopy = new THREE.Mesh(leafGeo, leafMat);
+            canopy.position.y = 3.2;
+            treeGroup.add(canopy);
+
+            const hiveGeo = new THREE.SphereGeometry(0.5, 12, 12);
+            const hiveMat = new THREE.MeshStandardMaterial({ color: 0xd97706 });
+            hiveGroup = new THREE.Mesh(hiveGeo, hiveMat);
+            hiveGroup.position.set(-0.8, 2.2, 0.4);
+            treeGroup.add(hiveGroup);
+
+            treeGroup.position.set(-4.5, 0, -2);
+            scene.add(treeGroup);
+
+            hitRings.hive = create3DHitRing(-4.5, -2, 0x10b981);
+        }
+
+        function createOwl() {
+            owlGroup = new THREE.Group();
+            const bodyGeo = new THREE.CylinderGeometry(0.35, 0.45, 0.9, 12);
+            const bodyMat = new THREE.MeshStandardMaterial({ color: 0x0d9488 });
+            const body = new THREE.Mesh(bodyGeo, bodyMat);
+            body.position.y = 0.5;
+            owlGroup.add(body);
+
+            owlGroup.position.set(-1.8, 0, 1.5);
+            scene.add(owlGroup);
+
+            hitRings.owl = create3DHitRing(-1.8, 1.5, 0x06b6d4);
+        }
+
+        function createShadowFox() {
+            foxGroup = new THREE.Group();
+            const bodyGeo = new THREE.ConeGeometry(0.6, 1.8, 8);
+            const bodyMat = new THREE.MeshStandardMaterial({ color: 0x111827 });
+            const body = new THREE.Mesh(bodyGeo, bodyMat);
+            body.position.y = 0.9;
+            foxGroup.add(body);
+
+            foxGroup.position.set(5.5, 0, -5);
+            scene.add(foxGroup);
+
+            hitRings.fox = create3DHitRing(5.5, -5, 0xef4444);
+        }
+
+        function createTrapItem() {
+            const trapGroup = new THREE.Group();
+            const canGeo = new THREE.CylinderGeometry(0.2, 0.2, 0.5, 10);
+            const canMat = new THREE.MeshStandardMaterial({ color: 0xe11d48 });
+            trapMesh = new THREE.Mesh(canGeo, canMat);
+            trapMesh.rotation.z = Math.PI / 3;
+            trapMesh.position.y = 0.25;
+            trapGroup.add(trapMesh);
+
+            trapGroup.position.set(2.8, 0, 1.8);
+            scene.add(trapGroup);
+        }
+
+        function createFriendshipFlowers() {
+            for(let i=0; i<8; i++) {
+                const flowerGeo = new THREE.SphereGeometry(0.15, 8, 8);
+                const flowerMat = new THREE.MeshStandardMaterial({ color: 0xf43f5e, emissive: 0x441122 });
+                const flower = new THREE.Mesh(flowerGeo, flowerMat);
+                const angle = (i / 8) * Math.PI * 2;
+                flower.position.set(Math.cos(angle)*6, 0.2, Math.sin(angle)*6);
+                scene.add(flower);
+            }
+        }
+
+        function setupControls() {
+            window.addEventListener('keydown', (e) => {
+                if (e.key === 'w' || e.key === 'W' || e.key === 'ArrowUp') keyState.up = true;
+                if (e.key === 's' || e.key === 'S' || e.key === 'ArrowDown') keyState.down = true;
+                if (e.key === 'a' || e.key === 'A' || e.key === 'ArrowLeft') keyState.left = true;
+                if (e.key === 'd' || e.key === 'D' || e.key === 'ArrowRight') keyState.right = true;
+                if (e.code === 'Space') triggerHop();
+                if (e.key === 'e' || e.key === 'E') triggerAction();
+            });
+
+            window.addEventListener('keyup', (e) => {
+                if (e.key === 'w' || e.key === 'W' || e.key === 'ArrowUp') keyState.up = false;
+                if (e.key === 's' || e.key === 'S' || e.key === 'ArrowDown') keyState.down = false;
+                if (e.key === 'a' || e.key === 'A' || e.key === 'ArrowLeft') keyState.left = false;
+                if (e.key === 'd' || e.key === 'D' || e.key === 'ArrowRight') keyState.right = false;
+            });
+
+            bindTouchButton('btn-up', 'up');
+            bindTouchButton('btn-down', 'down');
+            bindTouchButton('btn-left', 'left');
+            bindTouchButton('btn-right', 'right');
+
+            document.getElementById('btn-hop').addEventListener('pointerdown', triggerHop);
+            document.getElementById('btn-action').addEventListener('pointerdown', triggerAction);
+            document.getElementById('btn-proximity-interact').addEventListener('click', triggerAction);
+            document.getElementById('next-btn').addEventListener('click', handleNextDialogue);
+
+            document.getElementById('sound-btn').addEventListener('click', () => {
+                soundEnabled = !soundEnabled;
+                document.getElementById('sound-btn').innerHTML = soundEnabled ? 
+                    `<i data-lucide="volume-2" class="w-4 h-4"></i>` : 
+                    `<i data-lucide="volume-x" class="w-4 h-4 text-red-400"></i>`;
+                lucide.createIcons();
+            });
+
+            document.getElementById('info-btn').addEventListener('click', () => {
+                document.getElementById('edu-card').classList.remove('hidden');
+            });
+            document.getElementById('close-edu').addEventListener('click', () => {
+                document.getElementById('edu-card').classList.add('hidden');
+            });
+            document.getElementById('close-minigame').addEventListener('click', () => {
+                document.getElementById('minigame-modal').classList.add('hidden');
+            });
+            document.getElementById('restart-demo').addEventListener('click', () => location.reload());
+        }
+
+        function bindTouchButton(elementId, key) {
+            const btn = document.getElementById(elementId);
+            const start = (e) => { e.preventDefault(); keyState[key] = true; };
+            const end = (e) => { e.preventDefault(); keyState[key] = false; };
+            btn.addEventListener('pointerdown', start);
+            btn.addEventListener('pointerup', end);
+            btn.addEventListener('pointerleave', end);
+        }
+
+        function triggerHop() {
+            if (!isHopping) {
+                isHopping = true;
+                bunnyVelocityY = 0.18;
+                AudioFX.playHop();
+            }
+        }
+
+        function triggerAction() {
+            if (currentNearbyEntity === 'hedgehog') {
+                updateDialogue(storySteps.hedgehog_trap);
+            } else if (currentNearbyEntity === 'hive') {
+                updateDialogue(storySteps.hive_quest);
+            } else if (currentNearbyEntity === 'owl') {
+                updateDialogue(storySteps.owl_wisdom);
+            } else {
+                triggerHop();
+            }
+        }
+
+        function removeHedgehogTrap() {
+            if (trapMesh) {
+                scene.remove(trapMesh.parent);
+                trapMesh = null;
+                AudioFX.playCollect();
+                addStar();
+                addFriendship();
+                updateDialogue({
+                    speaker: "Erschöpfter Igel 🦔",
+                    avatar: "🦔",
+                    color: "text-amber-400",
+                    tag: "Danke!",
+                    text: "Danke Regenbogenhase! Die Lärmdose ist weg. Jetzt kann ich mich in Ruhe in meinen Unterschlupf zurückziehen!",
+                    choices: null
+                });
+            }
+        }
+
+        function badHedgehogChoice() {
+            updateDialogue({
+                speaker: "Weise Eule 🦉",
+                avatar: "🦉",
+                color: "text-emerald-400",
+                tag: "Tipp",
+                text: "Warte kurz! Dem Fuchs hinterherzugehen kostet nur deine eigene Energie. Wir schützen zuerst den Igel und setzen klare Grenzen!",
+                choices: [
+                    {
+                        label: "Lärmdose friedlich entfernen ❤️",
+                        action: () => removeHedgehogTrap()
+                    }
+                ]
+            });
+        }
+
+        function addStar() {
+            starsCollected++;
+            document.getElementById('star-count').innerText = `${starsCollected} / 3`;
+        }
+
+        function addFriendship() {
+            friendshipPoints += 10;
+            document.getElementById('friend-count').innerText = friendshipPoints;
+        }
+
+        function startShieldMinigame() {
+            const minigameModal = document.getElementById('minigame-modal');
+            const targetsBox = document.getElementById('minigame-targets');
+            minigameModal.classList.remove('hidden');
+            targetsBox.innerHTML = '';
+
+            let currentScore = 0;
+            const targetGoal = 5;
+            document.getElementById('minigame-score').innerText = `0 / ${targetGoal} Blüten`;
+
+            function spawnTarget() {
+                if (currentScore >= targetGoal) return;
+                const btn = document.createElement('button');
+                btn.className = 'absolute w-10 h-10 bg-emerald-500/90 rounded-full border-2 border-white flex items-center justify-center text-lg shadow-lg pulse-hint transition transform active:scale-90';
+                btn.innerText = '🌸';
+                btn.style.left = `${10 + Math.random() * 75}%`;
+                btn.style.top = `${10 + Math.random() * 75}%`;
+
+                btn.onclick = () => {
+                    currentScore++;
+                    AudioFX.playCollect();
+                    document.getElementById('minigame-score').innerText = `${currentScore} / ${targetGoal} Blüten`;
+                    btn.remove();
+                    if (currentScore >= targetGoal) {
+                        AudioFX.playSuccess();
+                        setTimeout(() => {
+                            minigameModal.classList.add('hidden');
+                            addStar();
+                            addFriendship();
+                            updateDialogue(storySteps.owl_wisdom);
+                        }, 500);
+                    } else {
+                        spawnTarget();
+                    }
+                };
+                targetsBox.appendChild(btn);
+            }
+
+            spawnTarget();
+        }
+
+        function updateDialogue(step) {
+            document.getElementById('speaker-avatar').innerText = step.avatar;
+            const nameEl = document.getElementById('speaker-name');
+            nameEl.innerText = step.speaker;
+            nameEl.className = `font-bold text-xs md:text-sm ${step.color}`;
+            document.getElementById('dialogue-tag').innerText = step.tag;
+            document.getElementById('dialogue-text').innerText = `"${step.text}"`;
+
+            const choicesContainer = document.getElementById('dialogue-choices');
+            const footerContainer = document.getElementById('dialogue-footer');
+
+            if (step.choices && step.choices.length > 0) {
+                choicesContainer.innerHTML = '';
+                choicesContainer.classList.remove('hidden');
+                footerContainer.classList.add('hidden');
+
+                step.choices.forEach(ch => {
+                    const btn = document.createElement('button');
+                    btn.className = 'w-full py-1.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-left text-xs font-bold text-amber-300 transition';
+                    btn.innerText = ch.label;
+                    btn.onclick = ch.action;
+                    choicesContainer.appendChild(btn);
+                });
+            } else {
+                choicesContainer.classList.add('hidden');
+                footerContainer.classList.remove('hidden');
+            }
+        }
+
+        function handleNextDialogue() {
+            AudioFX.playHop();
+            if (activeStoryStep === "start") {
+                activeStoryStep = "hedgehog_trap";
+                updateDialogue(storySteps.hedgehog_trap);
+            } else {
+                document.getElementById('edu-card').classList.remove('hidden');
+            }
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        const clock = new THREE.Clock();
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const delta = clock.getDelta();
+            const time = clock.getElapsedTime();
+
+            // Movement logic
+            let moveX = 0, moveZ = 0;
+            const speed = 4.5 * delta;
+
+            if (keyState.up) moveZ -= speed;
+            if (keyState.down) moveZ += speed;
+            if (keyState.left) moveX -= speed;
+            if (keyState.right) moveX += speed;
+
+            if (moveX !== 0 || moveZ !== 0) {
+                bunnyPos.x += moveX;
+                bunnyPos.z += moveZ;
+
+                const distFromCenter = Math.hypot(bunnyPos.x, bunnyPos.z);
+                if (distFromCenter > 12) {
+                    bunnyPos.x -= moveX;
+                    bunnyPos.z -= moveZ;
+                }
+
+                bunnyPos.rot = Math.atan2(moveX, moveZ);
+                bunnyGroup.rotation.y = bunnyPos.rot;
+
+                if (!isHopping) {
+                    bunnyGroup.position.y = Math.abs(Math.sin(time * 12)) * 0.25;
+                }
+            }
+
+            if (isHopping) {
+                bunnyGroup.position.y += bunnyVelocityY;
+                bunnyVelocityY -= 0.6 * delta;
+
+                if (bunnyGroup.position.y <= 0) {
+                    bunnyGroup.position.y = 0;
+                    isHopping = false;
+                }
+            }
+
+            bunnyGroup.position.x = bunnyPos.x;
+            bunnyGroup.position.z = bunnyPos.z;
+
+            // Camera follow
+            camera.position.x = THREE.MathUtils.lerp(camera.position.x, bunnyPos.x, 0.05);
+            camera.position.z = THREE.MathUtils.lerp(camera.position.z, bunnyPos.z + 8, 0.05);
+            camera.lookAt(bunnyPos.x, 1, bunnyPos.z);
+
+            if (crownMesh) crownMesh.rotation.y = time * 2;
+
+            // Check Proximity to Hitboxes
+            const distHedgehog = Math.hypot(bunnyPos.x - 3.5, bunnyPos.z - 1);
+            const distHive = Math.hypot(bunnyPos.x - (-4.5), bunnyPos.z - (-2));
+            const distOwl = Math.hypot(bunnyPos.x - (-1.8), bunnyPos.z - 1.5);
+
+            const promptEl = document.getElementById('proximity-prompt');
+            const promptText = document.getElementById('proximity-text');
+
+            if (distHedgehog < 2.0) {
+                currentNearbyEntity = 'hedgehog';
+                promptEl.classList.remove('hidden');
+                promptText.innerText = "Mit Igel sprechen [E]";
+                hitRings.hedgehog.material.opacity = 0.9;
+            } else if (distHive < 2.2) {
+                currentNearbyEntity = 'hive';
+                promptEl.classList.remove('hidden');
+                promptText.innerText = "Bienenstock prüfen [E]";
+                hitRings.hive.material.opacity = 0.9;
+            } else if (distOwl < 2.0) {
+                currentNearbyEntity = 'owl';
+                promptEl.classList.remove('hidden');
+                promptText.innerText = "Mit Eule sprechen [E]";
+                hitRings.owl.material.opacity = 0.9;
+            } else {
+                currentNearbyEntity = null;
+                promptEl.classList.add('hidden');
+                Object.values(hitRings).forEach(r => r.material.opacity = 0.4);
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        window.addEventListener('DOMContentLoaded', init3D);
+    </script>
+</body>
+</html>
