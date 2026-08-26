@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>X42: Pandora's Dream — Pixel Novel</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="boot" class="boot">
+  <div class="boot-card">
+    <div class="boot-mark">X42</div>
+    <h1>PANDORA'S DREAM</h1>
+    <p class="muted">A pixel-novel theatre about memory, code, and the moment reality notices you.</p>
+    <div class="login">
+      <label>USERNAME<input id="username" autocomplete="off" placeholder="X"></label>
+      <label>PASSWORD<input id="password" type="password" placeholder="42"></label>
+      <button id="loginBtn">ENTER SYSTEM</button>
+      <div id="loginMsg" class="login-msg"></div>
+    </div>
+  </div>
+</div>
+
+<main id="game" class="hidden">
+  <header class="topbar">
+    <div><span class="sigil">✦</span> X42 / PANDORA'S DREAM</div>
+    <div id="status">DREAM STATE: STABLE</div>
+  </header>
+
+  <section class="game-shell">
+    <div class="stage-wrap">
+      <canvas id="stage" width="960" height="600"></canvas>
+      <div id="hotspots"></div>
+      <div class="scanlines"></div>
+      <div id="glitch"></div>
+    </div>
+
+    <aside class="side">
+      <div class="panel">
+        <h2>ROOM LOG</h2>
+        <div id="log" class="log"></div>
+      </div>
+      <div class="panel">
+        <h2>INVENTORY</h2>
+        <div id="inventory" class="inventory"></div>
+      </div>
+      <div class="panel">
+        <h2>WORLDPEACE HTML</h2>
+        <p class="small">Paste GitHub HTML links. The final filename becomes the display name.</p>
+        <textarea id="links" placeholder="https://github.com/you/repo/blob/main/worldpeacebtn.html"></textarea>
+        <button id="loadLinks">LOAD INTO WORLDPEACE CANVAS</button>
+        <div id="linkNames" class="small"></div>
+      </div>
+    </aside>
+  </section>
+
+  <section class="novel">
+    <div class="speaker"><span id="speaker">PANDORA</span><span id="chapter">CHAPTER 01 · THE ROOM THAT REMEMBERS</span></div>
+    <p id="story"></p>
+    <div class="choices" id="choices"></div>
+  </section>
+</main>
+
+<div id="computerModal" class="modal hidden">
+  <div class="modal-card computer">
+    <button class="close" data-close="computerModal">×</button>
+    <div class="computer-head"><span>◉ PANDORA'S iMAC</span><span id="clock"></span></div>
+    <div class="desktop">
+      <button class="app-icon" data-app="worldpeace">🌐<span>WORLDPEACE</span></button>
+      <button class="app-icon" data-app="terminal">▣<span>TERMINAL</span></button>
+      <button class="app-icon" data-app="dreamlog">◈<span>DREAM.LOG</span></button>
+      <div class="terminal" id="terminal">
+        <div>X42 PANDORA KERNEL v4.2</div>
+        <div>> identity: DEVELOPER</div>
+        <div>> memory: PARTIAL</div>
+        <div>> reality-check: <span class="danger">UNRESOLVED</span></div>
+        <div id="terminalLine">> waiting...</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="worldModal" class="modal hidden">
+  <div class="modal-card world">
+    <button class="close" data-close="worldModal">×</button>
+    <div class="computer-head"><span>WORLDPEACE CANVAS</span><span id="worldTitle">LINK</span></div>
+    <div id="worldTabs" class="tabs"></div>
+    <iframe id="worldFrame" title="WorldPeace HTML Canvas" sandbox="allow-scripts allow-forms allow-popups"></iframe>
+    <div id="worldFallback" class="fallback hidden"></div>
+  </div>
+</div>
+
+<div id="rebootModal" class="modal hidden">
+  <div class="modal-card reboot">
+    <div class="boot-mark">X42</div>
+    <h2>SYSTEM REBOOT</h2>
+    <p id="rebootText">Do not look behind the loading screen.</p>
+    <div class="progress"><i id="progressBar"></i></div>
+    <div id="rebootGlyph">░░░░░░░░░░</div>
+  </div>
+</div>
+
+<script src="game.js"></script>
+</body>
+</html>
