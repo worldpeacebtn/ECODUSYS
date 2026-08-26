@@ -1,0 +1,909 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>X42: Utopia Now - Pandora's Pixel Novel & 2.5D Free-Roaming Room</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Share Tech Mono', monospace; background-color: #030712; color: #a7f3d0; overflow-x: hidden; }
+        .font-cyber { font-family: 'Orbitron', sans-serif; }
+        .cyber-grid { background-image: linear-gradient(to right, rgba(0, 255, 102, 0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(0, 255, 102, 0.05) 1px, transparent 1px); background-size: 30px 30px; }
+        .scanline { background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0) 50%, rgba(0, 255, 100, 0.08) 50%, rgba(0, 255, 100, 0.08)); background-size: 100% 4px; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #050b14; }
+        ::-webkit-scrollbar-thumb { background: #00ff66; border-radius: 3px; }
+        .hitbox-overlay { transition: all 0.2s ease; }
+        .hitbox-overlay:hover { background-color: rgba(0, 255, 102, 0.25); border-color: rgba(0, 255, 102, 0.9); box-shadow: 0 0 15px rgba(0,255,102,0.5); }
+        .gameboy-case { background: #1f293d; box-shadow: inset 0 10px 20px rgba(0,0,0,0.6), 0 20px 40px rgba(0,0,0,0.8), inset 0 -4px 10px rgba(255,255,255,0.1); border: 4px solid #111827; }
+        .gameboy-screen { background: #080e1a; box-shadow: inset 0 0 20px rgba(0,255,102,0.25); border: 3px solid #334155; }
+        .room-asset { transition: all 0.2s ease; cursor: pointer; }
+        .room-asset:hover { filter: brightness(1.3); transform: scale(1.05); }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col cyber-grid relative">
+
+    <div class="absolute inset-0 scanline pointer-events-none z-50 opacity-60"></div>
+
+    <header class="bg-[#080f1d]/95 border-b border-[#00ff66]/30 px-6 py-3 flex items-center justify-between sticky top-0 z-40 backdrop-blur-md">
+        <div class="flex items-center space-x-3">
+            <div class="w-10 h-10 rounded bg-[#00ff66]/10 border border-[#00ff66] flex items-center justify-center text-[#00ff66] font-cyber font-black text-xl shadow-[0_0_15px_rgba(0,255,102,0.4)]">
+                X42
+            </div>
+            <div>
+                <h1 class="font-cyber font-black text-sm text-emerald-400 tracking-wider">ECODUSYS/X42 // PANDORA'S PIXEL NOVEL</h1>
+                <p class="text-[10px] text-slate-400">WORLDPEACEBTN &bull; 2.5D FREE-ROAMING ROOM ACTIVE</p>
+            </div>
+        </div>
+        
+        <div class="flex items-center space-x-2 overflow-x-auto">
+            <button onclick="switchTab('stage')" id="nav-stage" class="px-3 py-1.5 rounded font-cyber text-xs border border-[#00ff66] bg-[#00ff66]/20 text-emerald-300 transition shadow-[0_0_10px_rgba(0,255,102,0.2)] whitespace-nowrap flex items-center space-x-1.5">
+                <span>🕹️</span><span>STAGE</span>
+            </button>
+            <button onclick="switchTab('heroines')" id="nav-heroines" class="px-3 py-1.5 rounded font-cyber text-xs border border-slate-700 bg-slate-900/80 text-slate-400 hover:border-[#00ff66] hover:text-emerald-300 transition whitespace-nowrap flex items-center space-x-1.5">
+                <span>👯</span><span>HEROINES</span>
+            </button>
+            <button onclick="switchTab('atlas')" id="nav-atlas" class="px-3 py-1.5 rounded font-cyber text-xs border border-slate-700 bg-slate-900/80 text-slate-400 hover:border-[#00ff66] hover:text-emerald-300 transition whitespace-nowrap flex items-center space-x-1.5">
+                <span>🗺️</span><span>ATLAS</span>
+            </button>
+            <button onclick="switchTab('inventory')" id="nav-inventory" class="px-3 py-1.5 rounded font-cyber text-xs border border-slate-700 bg-slate-900/80 text-slate-400 hover:border-[#00ff66] hover:text-emerald-300 transition whitespace-nowrap flex items-center space-x-1.5">
+                <span>🎒</span><span>GEAR</span>
+            </button>
+            <button onclick="switchTab('companions')" id="nav-companions" class="px-3 py-1.5 rounded font-cyber text-xs border border-slate-700 bg-slate-900/80 text-slate-400 hover:border-[#00ff66] hover:text-emerald-300 transition whitespace-nowrap flex items-center space-x-1.5">
+                <span>🐾</span><span>SQUAD</span>
+            </button>
+            <button onclick="switchTab('generator')" id="nav-generator" class="px-3 py-1.5 rounded font-cyber text-xs border border-slate-700 bg-slate-900/80 text-slate-400 hover:border-[#00ff66] hover:text-emerald-300 transition whitespace-nowrap flex items-center space-x-1.5">
+                <span>🎨</span><span>PING MAKER</span>
+            </button>
+            <button onclick="switchTab('editor')" id="nav-editor" class="px-3 py-1.5 rounded font-cyber text-xs border border-slate-700 bg-slate-900/80 text-slate-400 hover:border-[#00ff66] hover:text-emerald-300 transition whitespace-nowrap flex items-center space-x-1.5">
+                <span>📜</span><span>MOVE ENGLAND</span>
+            </button>
+        </div>
+    </header>
+
+    <main class="flex-1 p-4 md:p-6 max-w-7xl mx-auto w-full flex flex-col z-10">
+
+        <!-- ================= STAGE VIEW (2.5D FREE-ROAMING ROOM) ================= -->
+        <div id="view-stage" class="space-y-4">
+            <div class="grid grid-cols-1 lg:grid-cols-4 gap-4">
+                
+                <!-- Game Boy Retro Console with Free-Roaming Room Stage -->
+                <div class="lg:col-span-3 gameboy-case rounded-2xl p-6 flex flex-col items-center shadow-2xl relative">
+                    <!-- Console Header branding -->
+                    <div class="w-full flex justify-between items-center mb-4 px-2 text-xs font-cyber text-slate-400">
+                        <span class="flex items-center space-x-2">
+                            <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span>
+                            <span class="text-emerald-400 font-bold" id="active-character-title">STARDUST BUNNY // X42 ROOM</span>
+                        </span>
+                        <span>BATTERY: 🔋 [█████] 100%</span>
+                    </div>
+
+                    <!-- Stage Screen Centered Above Controls -->
+                    <div class="gameboy-screen w-full aspect-[16/9] rounded-xl relative overflow-hidden flex flex-col shadow-inner" id="room-container">
+                        <!-- Room Parallax Background & Grid -->
+                        <div id="parallax-bg" class="absolute inset-0 pointer-events-none cyber-grid opacity-50"></div>
+
+                        <!-- Interactive Asset Trigger Points in the Room -->
+                        <div class="absolute inset-0 pointer-events-none z-10">
+                            <!-- Terminal 42 Asset -->
+                            <div onclick="triggerAsset('Terminal 42', 'Hacking Utopia central mainframe... System blind spot widened!')" class="room-asset absolute top-[18%] left-[12%] p-3 bg-black/60 border border-emerald-500/50 rounded-lg pointer-events-auto flex flex-col items-center shadow-[0_0_15px_rgba(0,255,102,0.3)]">
+                                <span class="text-lg">💻</span>
+                                <span class="text-[9px] font-cyber text-emerald-300 mt-0.5">TERMINAL 42</span>
+                            </div>
+
+                            <!-- Pandora's Server Rack -->
+                            <div onclick="triggerAsset('Pandora Server', 'Accessing forbidden pixel archives. Novel lore unlocked!')" class="room-asset absolute top-[15%] right-[15%] p-3 bg-black/60 border border-purple-500/50 rounded-lg pointer-events-auto flex flex-col items-center shadow-[0_0_15px_rgba(168,85,247,0.3)]">
+                                <span class="text-lg">🗄️</span>
+                                <span class="text-[9px] font-cyber text-purple-300 mt-0.5">PANDORA SERVER</span>
+                            </div>
+
+                            <!-- Magic Lantern Asset -->
+                            <div onclick="triggerAsset('Neon Lantern', 'Aura resonance boosted to maximum capacity!')" class="room-asset bottom-[28%] left-[22%] p-2.5 bg-black/60 border border-cyan-500/50 rounded-lg pointer-events-auto flex flex-col items-center shadow-[0_0_15px_rgba(6,182,212,0.3)]">
+                                <span class="text-base">🏮</span>
+                                <span class="text-[8px] font-cyber text-cyan-300 mt-0.5">LANTERN</span>
+                            </div>
+
+                            <!-- Stardust Portal Asset -->
+                            <div onclick="triggerAsset('Stardust Portal', 'Teleporting across parallel 2.5D depth layers!')" class="room-asset bottom-[32%] right-[25%] p-2.5 bg-black/60 border border-pink-500/50 rounded-lg pointer-events-auto flex flex-col items-center shadow-[0_0_15px_rgba(236,72,153,0.3)]">
+                                <span class="text-base">🌀</span>
+                                <span class="text-[8px] font-cyber text-pink-300 mt-0.5">PORTAL</span>
+                            </div>
+                        </div>
+
+                        <!-- Companion Squad Layer (Moon Cat 🐱, Rainbow Spider 🕷️, Black Bunny 🐰) -->
+                        <div id="companions-stage-layer" class="absolute inset-0 pointer-events-none z-20">
+                            <!-- Moon Cat -->
+                            <div id="comp-cat" class="absolute transition-all duration-300 flex flex-col items-center" style="bottom: 80px; left: 120px;">
+                                <div class="bg-purple-950/90 border border-purple-500/50 px-1.5 py-0.5 rounded text-[8px] text-purple-300 font-cyber mb-1 shadow-[0_0_10px_rgba(168,85,247,0.4)]">🐱 MOON CAT</div>
+                                <div class="w-7 h-7 rounded-full bg-purple-900/50 border border-purple-400 flex items-center justify-center text-purple-300 shadow-[0_0_15px_rgba(168,85,247,0.6)] animate-bounce">
+                                    <i class="fa-solid fa-cat text-[10px]"></i>
+                                </div>
+                            </div>
+                            <!-- Rainbow Spider -->
+                            <div id="comp-spider" class="absolute transition-all duration-300 flex flex-col items-center" style="bottom: 120px; right: 180px;">
+                                <div class="bg-pink-950/90 border border-pink-500/50 px-1.5 py-0.5 rounded text-[8px] text-pink-300 font-cyber mb-1 shadow-[0_0_10px_rgba(236,72,153,0.4)]">🕷️ SPIDER</div>
+                                <div class="w-6 h-6 rounded-full bg-pink-900/50 border border-pink-400 flex items-center justify-center text-pink-300 shadow-[0_0_15px_rgba(236,72,153,0.6)] animate-pulse">
+                                    <i class="fa-solid fa-spider text-[10px]"></i>
+                                </div>
+                            </div>
+                            <!-- Black Bunny (if not active character) -->
+                            <div id="comp-bunny" class="absolute transition-all duration-300 flex flex-col items-center" style="bottom: 75px; right: 100px;">
+                                <div class="bg-indigo-950/90 border border-indigo-500/50 px-1.5 py-0.5 rounded text-[8px] text-indigo-300 font-cyber mb-1 shadow-[0_0_10px_rgba(99,102,241,0.4)]">🐰 BUNNY</div>
+                                <div class="w-7 h-7 rounded-full bg-indigo-900/50 border border-indigo-400 flex items-center justify-center text-indigo-300 shadow-[0_0_15px_rgba(99,102,241,0.6)]">
+                                    <i class="fa-solid fa-rabbit text-[10px]"></i>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Free-Roaming Active Character Sprite Entity -->
+                        <div id="heroine-entity" class="absolute transition-all duration-100 flex flex-col items-center z-30" style="bottom: 40px; left: 220px; width: 100px; height: 190px;">
+                            <div id="heroine-aura" class="absolute inset-0 rounded-full bg-emerald-500/25 blur-xl pointer-events-none transition-all duration-300 shadow-[0_0_30px_rgba(0,255,102,0.5)]"></div>
+                            <div id="heroine-expression-badge" class="absolute -top-5 bg-black/90 border border-emerald-500/50 px-2 py-0.5 rounded text-[9px] text-emerald-400 font-cyber z-35 whitespace-nowrap">
+                                STARDUST // FIGHT ⚔️
+                            </div>
+                            <!-- Rendered Sprite Box -->
+                            <div id="heroine-sprite-box" class="w-full h-full relative overflow-hidden rounded-lg border border-[#00ff66]/50 bg-black/70 backdrop-blur-sm shadow-2xl flex items-center justify-center">
+                                <img id="stage-sprite-view" src="https://i.ibb.co/6RzYt2m/sheet.png" alt="Heroine" class="w-[300%] h-[300%] object-cover object-left-top filter contrast-110">
+                            </div>
+                        </div>
+
+                        <!-- Room Depth Layer Floor Indicator -->
+                        <div class="absolute bottom-0 left-0 right-0 h-10 bg-gradient-to-t from-[#02050a] to-transparent border-t border-[#00ff66]/30 flex items-center px-4 justify-between text-[10px] text-slate-400 font-mono z-40">
+                            <span>ROOM: UTOPIA BLACK SPOT</span>
+                            <span>DEPTH LAYER: <strong id="current-layer-txt" class="text-cyan-400">L2 (MIDGROUND)</strong></span>
+                            <span>X: <span id="coord-x">220</span>, Y: <span id="coord-y">40</span></span>
+                        </div>
+                    </div>
+
+                    <!-- Game Boy Control Pad Section Below Screen (Full Directional + Actions) -->
+                    <div class="w-full mt-6 grid grid-cols-1 md:grid-cols-2 gap-4 items-center px-4">
+                        <!-- Full Directional D-Pad (Up, Down, Left, Right) -->
+                        <div class="flex items-center space-x-3">
+                            <span class="text-xs font-cyber text-slate-400">MOVE 🕹️</span>
+                            <div class="grid grid-cols-3 gap-1 w-32">
+                                <div></div>
+                                <button onclick="moveHeroineDir('up')" class="p-2 bg-slate-900 border border-slate-700 hover:border-[#00ff66] text-cyan-300 rounded text-center active:scale-95 transition font-bold text-xs">⬆️</button>
+                                <div></div>
+                                <button onclick="moveHeroineDir('left')" class="p-2 bg-slate-900 border border-slate-700 hover:border-[#00ff66] text-emerald-400 rounded text-center active:scale-95 transition font-bold text-xs">⬅️</button>
+                                <button onclick="triggerJump()" class="p-2 bg-slate-900 border border-cyan-500 hover:border-cyan-400 text-cyan-300 rounded text-center active:scale-95 transition font-bold text-[10px]">JUMP</button>
+                                <button onclick="moveHeroineDir('right')" class="p-2 bg-slate-900 border border-slate-700 hover:border-[#00ff66] text-emerald-400 rounded text-center active:scale-95 transition font-bold text-xs">➡️</button>
+                                <div></div>
+                                <button onclick="moveHeroineDir('down')" class="p-2 bg-slate-900 border border-slate-700 hover:border-[#00ff66] text-cyan-300 rounded text-center active:scale-95 transition font-bold text-xs">⬇️</button>
+                                <div></div>
+                            </div>
+                        </div>
+
+                        <!-- Action Buttons (A, B, SELECT, START) -->
+                        <div class="flex items-center justify-end space-x-3">
+                            <div class="flex flex-col items-center">
+                                <button onclick="setPose('fight')" class="w-10 h-10 rounded-full bg-red-950 border border-red-500 text-red-300 font-cyber font-bold text-xs shadow-[0_0_10px_rgba(239,68,68,0.5)] active:scale-95 transition">A</button>
+                                <span class="text-[9px] text-slate-400 mt-1">FIGHT ⚔️</span>
+                            </div>
+                            <div class="flex flex-col items-center">
+                                <button onclick="setPose('sleep')" class="w-10 h-10 rounded-full bg-indigo-950 border border-indigo-500 text-indigo-300 font-cyber font-bold text-xs shadow-[0_0_10px_rgba(99,102,241,0.5)] active:scale-95 transition">B</button>
+                                <span class="text-[9px] text-slate-400 mt-1">REST 💤</span>
+                            </div>
+                            <div class="flex flex-col items-center">
+                                <button onclick="cycleLayer()" class="px-3 py-1.5 bg-slate-900 border border-slate-700 text-cyan-300 rounded font-cyber text-[10px] shadow active:scale-95 transition">SELECT</button>
+                                <span class="text-[9px] text-slate-400 mt-1">LAYER 🏢</span>
+                            </div>
+                            <div class="flex flex-col items-center">
+                                <button onclick="triggerAdminHack()" class="px-3 py-1.5 bg-emerald-950 border border-emerald-500 text-emerald-300 rounded font-cyber text-[10px] shadow-[0_0_10px_rgba(0,255,102,0.3)] active:scale-95 transition">START</button>
+                                <span class="text-[9px] text-emerald-400 mt-1">HACK ⚡</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Terminal Sidebar -->
+                <div class="bg-[#080f1d] border border-[#00ff66]/30 rounded-2xl p-4 flex flex-col justify-between shadow-[0_0_20px_rgba(0,255,102,0.05)]">
+                    <div>
+                        <h3 class="font-cyber font-bold text-xs text-[#00ff66] mb-3 flex items-center justify-between">
+                            <span>💻 BLACK_SPOT LOG</span>
+                            <span>🟢 ACTIVE</span>
+                        </h3>
+                        <div id="terminal-logs" class="bg-black/70 border border-[#00ff66]/20 rounded-lg p-3 h-80 overflow-y-auto font-mono text-[11px] space-y-2 text-slate-300">
+                            <div class="text-emerald-400">[10:00:01] Ecodusys X42 Room Engine initialized.</div>
+                            <div class="text-emerald-400">[10:00:02] Dual Heroines loaded: StardustBunny & DarkMatterBunny.</div>
+                            <div class="text-purple-400">[10:00:03] Moon Cat 🐱 & Spider 🕷️ synched to room triggers.</div>
+                            <div class="text-slate-400">[10:00:05] Use D-pad to navigate room in all directions...</div>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 pt-3 border-t border-[#00ff66]/20">
+                        <div class="flex items-center justify-between mb-2 text-xs font-cyber text-slate-400">
+                            <span>RESONANCE FREQ</span>
+                            <span id="aura-boost-val" class="text-emerald-400">99.8 GHz ⚡</span>
+                        </div>
+                        <div class="w-full bg-slate-900 rounded-full h-2 border border-emerald-500/30 overflow-hidden">
+                            <div class="bg-gradient-to-r from-emerald-500 to-cyan-400 h-full w-full"></div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2 mt-3">
+                            <button onclick="setPose('learn')" class="py-1.5 bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-500 text-cyan-300 font-cyber font-bold text-[10px] rounded transition">
+                                📚 LEARN
+                            </button>
+                            <button onclick="setPose('dance')" class="py-1.5 bg-pink-500/20 hover:bg-pink-500/30 border border-pink-500 text-pink-300 font-cyber font-bold text-[10px] rounded transition">
+                                💃 DANCE
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= HEROINES SELECTION VIEW ================= -->
+        <div id="view-heroines" class="space-y-4 hidden">
+            <div class="bg-[#080f1d] border border-[#00ff66]/30 rounded-2xl p-6 shadow-[0_0_25px_rgba(0,255,102,0.1)]">
+                <div class="flex items-center justify-between mb-6 pb-4 border-b border-[#00ff66]/20">
+                    <div>
+                        <h2 class="font-cyber font-black text-base text-[#00ff66]">👯 DUAL HEROINES // STARDUST & DARK MATTER BUNNY</h2>
+                        <p class="text-xs text-slate-400">Select your active protagonist for the 2.5D room stage. Each brings unique auras, hacking stats, and pixel novel traits.</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Stardust Bunny Card -->
+                    <div id="card-stardust" class="bg-black/70 border-2 border-[#00ff66] rounded-2xl p-6 relative overflow-hidden flex flex-col justify-between shadow-[0_0_20px_rgba(0,255,102,0.2)]">
+                        <div class="space-y-3">
+                            <div class="flex items-center justify-between">
+                                <h3 class="font-cyber font-bold text-lg text-emerald-400">✨ STARDUST BUNNY</h3>
+                                <span class="px-2 py-1 bg-emerald-950 border border-emerald-500 text-emerald-300 text-[10px] rounded font-cyber" id="status-stardust">ACTIVE 🟢</span>
+                            </div>
+                            <p class="text-xs text-slate-300 leading-relaxed">Celestial hacker with neon green/cyan resonance. Excels at overriding Utopia security terminals and swift portal jumps.</p>
+                            <div class="grid grid-cols-2 gap-2 text-xs pt-2">
+                                <div class="bg-slate-900 p-2 rounded border border-emerald-500/30">
+                                    <div class="text-slate-400 text-[10px]">AURA TYPE</div>
+                                    <div class="text-emerald-300 font-bold">Neon Green Cyber</div>
+                                </div>
+                                <div class="bg-slate-900 p-2 rounded border border-emerald-500/30">
+                                    <div class="text-slate-400 text-[10px]">AGILITY</div>
+                                    <div class="text-cyan-300 font-bold">98 / 100</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mt-6 pt-4 border-t border-emerald-500/25 flex justify-end">
+                            <button onclick="selectHeroine('stardust')" class="px-4 py-2 bg-[#00ff66] text-black font-cyber font-bold text-xs rounded hover:bg-emerald-400 transition shadow-[0_0_10px_rgba(0,255,102,0.4)]">
+                                SELECT STARDUST BUNNY
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Dark Matter Bunny Card -->
+                    <div id="card-darkmatter" class="bg-black/70 border border-slate-700 rounded-2xl p-6 relative overflow-hidden flex flex-col justify-between transition hover:border-purple-500">
+                        <div class="space-y-3">
+                            <div class="flex items-center justify-between">
+                                <h3 class="font-cyber font-bold text-lg text-purple-400">🖤 DARK MATTER BUNNY</h3>
+                                <span class="px-2 py-1 bg-slate-900 border border-slate-700 text-slate-400 text-[10px] rounded font-cyber" id="status-darkmatter">STANDBY</span>
+                            </div>
+                            <p class="text-xs text-slate-300 leading-relaxed">Shadowy dark-hat hacker from the void depths. Masters stealth infiltration, quantum corruption, and deep background layers.</p>
+                            <div class="grid grid-cols-2 gap-2 text-xs pt-2">
+                                <div class="bg-slate-900 p-2 rounded border border-purple-500/30">
+                                    <div class="text-slate-400 text-[10px]">AURA TYPE</div>
+                                    <div class="text-purple-300 font-bold">Void Purple Glitch</div>
+                                </div>
+                                <div class="bg-slate-900 p-2 rounded border border-purple-500/30">
+                                    <div class="text-slate-400 text-[10px]">STEALTH</div>
+                                    <div class="text-pink-300 font-bold">100 / 100</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mt-6 pt-4 border-t border-purple-500/25 flex justify-end">
+                            <button onclick="selectHeroine('darkmatter')" class="px-4 py-2 bg-purple-950 border border-purple-500 text-purple-300 font-cyber font-bold text-xs rounded hover:bg-purple-900 transition">
+                                SELECT DARK MATTER BUNNY
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= SPRITE HITBOX ATLAS VIEW ================= -->
+        <div id="view-atlas" class="space-y-4 hidden">
+            <div class="bg-[#080f1d] border border-[#00ff66]/30 rounded-2xl p-6 shadow-[0_0_25px_rgba(0,255,102,0.1)]">
+                <div class="flex items-center justify-between mb-6 pb-4 border-b border-[#00ff66]/20">
+                    <div>
+                        <h2 class="font-cyber font-black text-base text-[#00ff66]">🗺️ SPRITE HITBOX & COORDINATE ATLAS ANALYSIS</h2>
+                        <p class="text-xs text-slate-400">Interactive coordinate mapping over the character sheet template. Click any zone to inspect assigned coordinates.</p>
+                    </div>
+                    <label class="px-4 py-2 bg-[#00ff66] hover:bg-emerald-400 text-black font-cyber font-bold text-xs rounded-lg transition cursor-pointer shadow-[0_0_15px_rgba(0,255,102,0.3)] flex items-center space-x-1">
+                        <span>📤</span><span>UPLOAD TEMPLATE</span>
+                        <input type="file" accept="image/*" class="hidden" onchange="handleAtlasUpload(event)">
+                    </label>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div class="lg:col-span-2 bg-black/70 border border-[#00ff66]/30 rounded-xl p-4 flex items-center justify-center relative overflow-hidden min-h-[450px]">
+                        <div id="atlas-container" class="relative max-w-full max-h-[600px] overflow-hidden rounded border border-emerald-500/40">
+                            <img id="atlas-image-elem" src="https://i.ibb.co/6RzYt2m/sheet.png" alt="Character Sheet" class="w-full h-auto object-contain block" onerror="this.src='https://placehold.co/1000x700/080f1d/00ff66?text=X42+Paperdoll+Character+Sheet';">
+                            
+                            <!-- Interactive Hitbox Overlays -->
+                            <div onclick="selectAtlasZone('Base Doll (Full)', 'X: 5% - 25%, Y: 10% - 90%')" class="absolute top-[8%] left-[4%] w-[22%] h-[84%] border-2 border-emerald-400/80 bg-emerald-500/10 rounded cursor-pointer hitbox-overlay flex items-start p-1">
+                                <span class="bg-black/80 text-emerald-300 text-[9px] px-1 rounded font-cyber">#1 Doll 👤</span>
+                            </div>
+                            <div onclick="selectAtlasZone('Long Cyber Coat', 'X: 28% - 46%, Y: 8% - 48%')" class="absolute top-[8%] left-[27%] w-[20%] h-[42%] border-2 border-cyan-400/80 bg-cyan-500/10 rounded cursor-pointer hitbox-overlay flex items-start p-1">
+                                <span class="bg-black/80 text-cyan-300 text-[9px] px-1 rounded font-cyber">#2 Coat 🧥</span>
+                            </div>
+                            <div onclick="selectAtlasZone('Headphones & Gear', 'X: 49% - 62%, Y: 5% - 28%')" class="absolute top-[5%] left-[49%] w-[14%] h-[24%] border-2 border-purple-400/80 bg-purple-500/10 rounded cursor-pointer hitbox-overlay flex items-start p-1">
+                                <span class="bg-black/80 text-purple-300 text-[9px] px-1 rounded font-cyber">#3 Gear 🎧</span>
+                            </div>
+                            <div onclick="selectAtlasZone('Sleep Poses (Set 1)', 'X: 64% - 95%, Y: 5% - 26%')" class="absolute top-[5%] left-[63%] w-[32%] h-[22%] border-2 border-indigo-400/80 bg-indigo-500/10 rounded cursor-pointer hitbox-overlay flex items-start p-1">
+                                <span class="bg-black/80 text-indigo-300 text-[9px] px-1 rounded font-cyber">#4 Sleep 💤</span>
+                            </div>
+                            <div onclick="selectAtlasZone('Fight / Combat Action', 'X: 64% - 95%, Y: 29% - 54%')" class="absolute top-[29%] left-[63%] w-[32%] h-[25%] border-2 border-red-400/80 bg-red-500/10 rounded cursor-pointer hitbox-overlay flex items-start p-1">
+                                <span class="bg-black/80 text-red-300 text-[9px] px-1 rounded font-cyber">#6 Fight ⚔️</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-black/50 border border-[#00ff66]/20 rounded-xl p-4 flex flex-col justify-between space-y-4">
+                        <div>
+                            <h3 class="font-cyber font-bold text-xs text-cyan-400 mb-2 border-b border-cyan-500/30 pb-2">SELECTED ZONE INFO</h3>
+                            <div id="atlas-selected-info" class="space-y-3 text-xs">
+                                <div class="bg-slate-900/80 p-3 rounded border border-emerald-500/30">
+                                    <div class="text-emerald-400 font-bold font-cyber text-sm mb-1" id="info-zone-name">Base Doll (Full)</div>
+                                    <div class="text-slate-400 mb-2">Coordinates: <code class="text-cyan-300" id="info-zone-coords">X: 5% - 25%, Y: 10% - 90%</code></div>
+                                    <p class="text-slate-300 leading-relaxed text-[11px]">Primary heroine rig node mapped for the 2.5D free-roaming room stage.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-slate-900/60 p-3 rounded border border-slate-800 text-xs space-y-2">
+                            <div class="font-cyber text-emerald-400 font-bold">PANDORA'S MAPPING 🐾</div>
+                            <p class="text-slate-400 text-[11px]">StardustBunny and DarkMatterBunny sync resonance frequencies directly with selected atlas nodes.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= PAPERDOLL GEAR & INVENTORY VIEW ================= -->
+        <div id="view-inventory" class="space-y-4 hidden">
+            <div class="bg-[#080f1d] border border-[#00ff66]/30 rounded-2xl p-6 shadow-[0_0_25px_rgba(0,255,102,0.1)]">
+                <div class="flex items-center justify-between mb-6 pb-4 border-b border-[#00ff66]/20">
+                    <div>
+                        <h2 class="font-cyber font-black text-base text-[#00ff66]">🎒 PAPERDOLL GEAR & AURA WORKBENCH</h2>
+                        <p class="text-xs text-slate-400">Swap outfits, containers, and aura modulators in the Utopia blind spot.</p>
+                    </div>
+                    <div class="text-xs font-cyber text-cyan-400">Active Slots: 4/4 Linked 🟢</div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="bg-black/50 border border-[#00ff66]/20 rounded-xl p-4 space-y-3">
+                        <h3 class="font-cyber font-bold text-xs text-cyan-400 border-b border-cyan-500/30 pb-2">OUTFIT VARIATIONS 🧥</h3>
+                        <div class="space-y-2 text-xs">
+                            <div onclick="selectOutfit('coat', 'Long Cyber Coat', '+40 Defense')" class="p-3 rounded border border-emerald-500 bg-emerald-950/30 cursor-pointer flex items-center justify-between transition">
+                                <div>
+                                    <div class="font-bold text-emerald-400">Long Cyber Coat (X42)</div>
+                                    <div class="text-[10px] text-slate-400">+40 Defense, Neon Shield Aura</div>
+                                </div>
+                                <span>✅</span>
+                            </div>
+                            <div onclick="selectOutfit('crop', 'Crop Top & Shorts', '+25 Agility')" class="p-3 rounded border border-slate-800 bg-slate-900/60 hover:border-slate-600 cursor-pointer flex items-center justify-between transition">
+                                <div>
+                                    <div class="font-bold text-slate-300">Crop Top & Shorts</div>
+                                    <div class="text-[10px] text-slate-400">+25 Agility, Stealth Aura</div>
+                                </div>
+                                <span class="text-slate-600">⭕</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-black/50 border border-[#00ff66]/20 rounded-xl p-4 space-y-3">
+                        <h3 class="font-cyber font-bold text-xs text-cyan-400 border-b border-cyan-500/30 pb-2">MAGICAL CONTAINERS 📦</h3>
+                        <div class="space-y-2 text-xs">
+                            <div class="p-2.5 rounded bg-slate-900/80 border border-emerald-500/40 flex items-center justify-between">
+                                <div class="flex items-center space-x-3">
+                                    <span class="text-base">🎧</span>
+                                    <div>
+                                        <div class="font-bold text-slate-200">X42 Audio Headset</div>
+                                        <div class="text-[10px] text-emerald-400">Blocks Mind Control</div>
+                                    </div>
+                                </div>
+                                <span class="px-2 py-0.5 bg-emerald-950 text-emerald-300 rounded text-[10px]">EQUIPPED</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-black/50 border border-[#00ff66]/20 rounded-xl p-4 space-y-3">
+                        <h3 class="font-cyber font-bold text-xs text-cyan-400 border-b border-cyan-500/30 pb-2">AURA MODULATOR ⚡</h3>
+                        <div class="space-y-3 text-xs">
+                            <div>
+                                <label class="block text-slate-400 mb-1 font-cyber text-[10px]">AURA COLOR:</label>
+                                <select id="aura-color-select" onchange="changeAuraColor(this.value)" class="w-full bg-slate-900 border border-emerald-500/40 rounded p-2 text-emerald-300 text-xs">
+                                    <option value="emerald">🟢 Neon Green (Stardust Standard)</option>
+                                    <option value="cyan">🔵 Cyan Cyber Pulse</option>
+                                    <option value="purple">🟣 Void Purple Glitch</option>
+                                    <option value="gold">🟡 Golden Admin Overload</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= COMPANION SQUAD VIEW ================= -->
+        <div id="view-companions" class="space-y-4 hidden">
+            <div class="bg-[#080f1d] border border-[#00ff66]/30 rounded-2xl p-6 shadow-[0_0_25px_rgba(0,255,102,0.1)]">
+                <div class="flex items-center justify-between mb-6 pb-4 border-b border-[#00ff66]/20">
+                    <div>
+                        <h2 class="font-cyber font-black text-base text-[#00ff66]">🐾 COMPANION SQUAD // MOON CAT, SPIDER & BUNNY</h2>
+                        <p class="text-xs text-slate-400">Configure your virtual assistants for automated hacking, stealth, and room scouting.</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="bg-black/50 border border-purple-500/30 rounded-xl p-5 space-y-3 relative overflow-hidden">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-10 h-10 rounded-full bg-purple-900/40 border border-purple-400 flex items-center justify-center text-purple-300 text-lg">🐱</div>
+                            <div>
+                                <h3 class="font-cyber font-bold text-sm text-purple-300">MOON CAT</h3>
+                                <p class="text-[10px] text-slate-400">Virtual Feline Assistant</p>
+                            </div>
+                        </div>
+                        <p class="text-xs text-slate-300 leading-relaxed">Detects hidden room security blind spots and grants +35% Night Vision.</p>
+                        <div class="pt-2 flex items-center justify-between text-xs">
+                            <span class="text-slate-400">Status: <strong class="text-purple-400">Active 🟢</strong></span>
+                            <button onclick="toggleCompanion('cat')" id="btn-comp-cat" class="px-3 py-1 bg-purple-950 border border-purple-500 text-purple-300 rounded font-cyber text-xs">SYNCED</button>
+                        </div>
+                    </div>
+
+                    <div class="bg-black/50 border border-pink-500/30 rounded-xl p-5 space-y-3 relative overflow-hidden">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-10 h-10 rounded-full bg-pink-900/40 border border-pink-400 flex items-center justify-center text-pink-300 text-lg">🕷️</div>
+                            <div>
+                                <h3 class="font-cyber font-bold text-sm text-pink-300">RAINBOW SPIDER</h3>
+                                <p class="text-[10px] text-slate-400">Data Web Weaver</p>
+                            </div>
+                        </div>
+                        <p class="text-xs text-slate-300 leading-relaxed">Weaves encrypted firewall nets to deflect Utopia surveillance drones.</p>
+                        <div class="pt-2 flex items-center justify-between text-xs">
+                            <span class="text-slate-400">Status: <strong class="text-pink-400">Active 🟢</strong></span>
+                            <button onclick="toggleCompanion('spider')" id="btn-comp-spider" class="px-3 py-1 bg-pink-950 border border-pink-500 text-pink-300 rounded font-cyber text-xs">SYNCED</button>
+                        </div>
+                    </div>
+
+                    <div class="bg-black/50 border border-indigo-500/30 rounded-xl p-5 space-y-3 relative overflow-hidden">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-10 h-10 rounded-full bg-indigo-900/40 border border-indigo-400 flex items-center justify-center text-indigo-300 text-lg">🐰</div>
+                            <div>
+                                <h3 class="font-cyber font-bold text-sm text-indigo-300">BLACK BUNNY</h3>
+                                <p class="text-[10px] text-slate-400">Quantum Scout</p>
+                            </div>
+                        </div>
+                        <p class="text-xs text-slate-300 leading-relaxed">Leaps ahead across parallel stage layers to scout admin terminals safely.</p>
+                        <div class="pt-2 flex items-center justify-between text-xs">
+                            <span class="text-slate-400">Status: <strong class="text-indigo-400">Active 🟢</strong></span>
+                            <button onclick="toggleCompanion('bunny')" id="btn-comp-bunny" class="px-3 py-1 bg-indigo-950 border border-indigo-500 text-indigo-300 rounded font-cyber text-xs">SYNCED</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= PING SPRITE & MAP MAKER AI GENERATOR ================= -->
+        <div id="view-generator" class="space-y-4 hidden">
+            <div class="bg-[#080f1d] border border-[#00ff66]/30 rounded-2xl p-6 shadow-[0_0_25px_rgba(0,255,102,0.1)]">
+                <div class="flex items-center justify-between mb-6 pb-4 border-b border-[#00ff66]/20">
+                    <div>
+                        <h2 class="font-cyber font-black text-base text-[#00ff66]">🎨 PING SPRITE MAKER & MAP GENERATOR</h2>
+                        <p class="text-xs text-slate-400">Generate tailored AI prompts and printable PNG templates for custom character sheets and futuristic city maps.</p>
+                    </div>
+                    <button onclick="generateCustomSheetCanvas()" class="px-4 py-2 bg-[#00ff66] hover:bg-emerald-400 text-black font-cyber font-bold text-xs rounded-lg transition shadow-[0_0_15px_rgba(0,255,102,0.3)]">
+                        🖨️ GENERATE & DOWNLOAD PNG
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-cyber text-cyan-400 mb-1">AI PROMPT GENERATOR (Midjourney / DALL-E):</label>
+                            <textarea id="ai-prompt-box" rows="5" class="w-full bg-black/80 border border-emerald-500/40 rounded-lg p-3 font-mono text-xs text-emerald-300 leading-relaxed" readonly>
+Character sheet paperdoll board, Division X42 futuristic cyberpunk dark-hat hacker heroine StardustBunny and DarkMatterBunny with glowing neon green and void purple accents, multi-pose grid (sleep, fight, learn, dance), expressions grid, companion moon cat and rainbow spider, paperdoll cutout tabs, dark synthwave palette, highly detailed --ar 16:9 --v 6.0
+                            </textarea>
+                            <button onclick="copyAiPrompt()" class="mt-2 px-3 py-1.5 bg-slate-900 border border-emerald-500/50 text-emerald-300 rounded text-xs font-cyber hover:bg-emerald-950 transition">
+                                📋 COPY PROMPT TO CLIPBOARD
+                            </button>
+                        </div>
+
+                        <div class="bg-black/60 p-4 rounded-xl border border-slate-800 text-xs space-y-2">
+                            <div class="font-cyber text-emerald-400 font-bold">INSTRUCTIONS FOR CUSTOM ASSETS:</div>
+                            <p class="text-slate-300">1. Copy the generated AI prompt above into an image generator.<br>2. Upload your generated PNG sheet back into the <strong>ATLAS</strong> tab.<br>3. The game engine maps hitboxes and coordinates for the 2.5D room stage instantly.</p>
+                        </div>
+                    </div>
+
+                    <div class="bg-black/80 border border-emerald-500/30 rounded-xl p-4 flex flex-col items-center justify-center relative min-h-[300px]">
+                        <div class="text-xs font-cyber text-slate-400 mb-2">PRINTABLE TEMPLATE PREVIEW (PNG EXPORT)</div>
+                        <canvas id="export-canvas" width="600" height="400" class="w-full max-w-md rounded border border-emerald-500/50 shadow-2xl bg-[#03060d]"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= MOVE ENGLAND STORYLINE EDITOR ================= -->
+        <div id="view-editor" class="space-y-4 hidden">
+            <div class="bg-[#080f1d] border border-[#00ff66]/30 rounded-2xl p-6 shadow-[0_0_25px_rgba(0,255,102,0.1)]">
+                <div class="flex items-center justify-between mb-6 pb-4 border-b border-[#00ff66]/20">
+                    <div>
+                        <h2 class="font-cyber font-black text-base text-[#00ff66]">📜 MOVE ENGLAND // STORYLINE & SCRIPT ENGINE</h2>
+                        <p class="text-xs text-slate-400">Craft custom quests, dialogue sequences, and spatial events for Stardust & Dark Matter Bunny in the black spot.</p>
+                    </div>
+                    <button onclick="runCustomScript()" class="px-4 py-2 bg-[#00ff66] hover:bg-emerald-400 text-black font-cyber font-bold text-xs rounded-lg transition shadow-[0_0_15px_rgba(0,255,102,0.3)]">
+                        ▶️ RUN SCRIPT SEQUENCE
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div class="lg:col-span-2 space-y-3">
+                        <label class="block text-xs font-cyber text-cyan-400">CUSTOM SCRIPT JSON:</label>
+                        <textarea id="script-editor-input" rows="10" class="w-full bg-black/80 border border-emerald-500/40 rounded-lg p-4 font-mono text-xs text-emerald-300 leading-relaxed focus:outline-none focus:border-emerald-400">
+{
+  "sequenceTitle": "Operation: Utopia Room Infiltration",
+  "startingLayer": 2,
+  "activeCharacter": "stardust",
+  "heroinePose": "fight",
+  "dialogueScript": [
+    { "speaker": "StardustBunny", "text": "Moon Cat 🐱 and Spider 🕷️, secure the room perimeter sensors." },
+    { "speaker": "Moon Cat", "text": "Meow! Blind spot verified. Utopia oversight is offline 🕶️." }
+  ]
+}
+                        </textarea>
+                    </div>
+
+                    <div class="space-y-4 bg-black/50 border border-[#00ff66]/20 rounded-xl p-4 flex flex-col justify-between">
+                        <div>
+                            <h3 class="font-cyber font-bold text-xs text-cyan-400 mb-3">SCENE PRESETS 🎬</h3>
+                            <div class="space-y-2 text-xs">
+                                <button onclick="loadPresetScript('infiltration')" class="w-full text-left p-2.5 rounded bg-slate-900 border border-slate-800 hover:border-emerald-500 text-slate-300 transition">
+                                    <div class="font-bold text-emerald-400">1. Stardust Room Infiltration</div>
+                                    <div class="text-[10px] text-slate-400">Moon Cat & Spider deployment</div>
+                                </button>
+                                <button onclick="loadPresetScript('darkmatter')" class="w-full text-left p-2.5 rounded bg-slate-900 border border-slate-800 hover:border-purple-500 text-slate-300 transition">
+                                    <div class="font-bold text-purple-400">2. Dark Matter Void Breach</div>
+                                    <div class="text-[10px] text-slate-400">Void purple glitch sequence</div>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        let gameState = {
+            activeCharacter: 'stardust', // 'stardust' or 'darkmatter'
+            x: 220,
+            y: 40,
+            layer: 2,
+            pose: 'fight',
+            auraColor: 'emerald',
+            activeOutfit: 'Long Cyber Coat',
+            companionsActive: { cat: true, spider: true, bunny: true }
+        };
+
+        function switchTab(tabId) {
+            ['stage', 'heroines', 'atlas', 'inventory', 'companions', 'generator', 'editor'].forEach(id => {
+                const el = document.getElementById('view-' + id);
+                if(el) el.classList.add('hidden');
+                const nav = document.getElementById('nav-' + id);
+                if(nav) nav.className = "px-3 py-1.5 rounded font-cyber text-xs border border-slate-700 bg-slate-900/80 text-slate-400 hover:border-[#00ff66] hover:text-emerald-300 transition whitespace-nowrap flex items-center space-x-1.5";
+            });
+            const targetView = document.getElementById('view-' + tabId);
+            if(targetView) targetView.classList.remove('hidden');
+            const targetNav = document.getElementById('nav-' + tabId);
+            if(targetNav) targetNav.className = "px-3 py-1.5 rounded font-cyber text-xs border border-[#00ff66] bg-[#00ff66]/20 text-emerald-300 transition shadow-[0_0_10px_rgba(0,255,102,0.2)] whitespace-nowrap flex items-center space-x-1.5";
+            
+            if(tabId === 'stage') {
+                renderStageScene();
+            } else if(tabId === 'generator') {
+                drawExportCanvas();
+            }
+        }
+
+        function selectHeroine(charKey) {
+            gameState.activeCharacter = charKey;
+            const stardustCard = document.getElementById('card-stardust');
+            const darkCard = document.getElementById('card-darkmatter');
+            const stardustStatus = document.getElementById('status-stardust');
+            const darkStatus = document.getElementById('status-darkmatter');
+            const titleElem = document.getElementById('active-character-title');
+
+            if(charKey === 'stardust') {
+                stardustCard.className = "bg-black/70 border-2 border-[#00ff66] rounded-2xl p-6 relative overflow-hidden flex flex-col justify-between shadow-[0_0_20px_rgba(0,255,102,0.2)]";
+                stardustStatus.innerText = "ACTIVE 🟢";
+                stardustStatus.className = "px-2 py-1 bg-emerald-950 border border-emerald-500 text-emerald-300 text-[10px] rounded font-cyber";
+                
+                darkCard.className = "bg-black/70 border border-slate-700 rounded-2xl p-6 relative overflow-hidden flex flex-col justify-between transition hover:border-purple-500";
+                darkStatus.innerText = "STANDBY";
+                darkStatus.className = "px-2 py-1 bg-slate-900 border border-slate-700 text-slate-400 text-[10px] rounded font-cyber";
+
+                if(titleElem) titleElem.innerText = "STARDUST BUNNY // X42 ROOM";
+                changeAuraColor('emerald');
+                addTerminalLog('Active heroine switched to STARDUST BUNNY ✨ (Neon Green Aura).');
+            } else {
+                darkCard.className = "bg-black/70 border-2 border-purple-500 rounded-2xl p-6 relative overflow-hidden flex flex-col justify-between shadow-[0_0_20px_rgba(168,85,247,0.2)]";
+                darkStatus.innerText = "ACTIVE 🟢";
+                darkStatus.className = "px-2 py-1 bg-purple-950 border border-purple-500 text-purple-300 text-[10px] rounded font-cyber";
+                
+                stardustCard.className = "bg-black/70 border border-slate-700 rounded-2xl p-6 relative overflow-hidden flex flex-col justify-between transition hover:border-emerald-500";
+                stardustStatus.innerText = "STANDBY";
+                stardustStatus.className = "px-2 py-1 bg-slate-900 border border-slate-700 text-slate-400 text-[10px] rounded font-cyber";
+
+                if(titleElem) titleElem.innerText = "DARK MATTER BUNNY // X42 ROOM";
+                changeAuraColor('purple');
+                addTerminalLog('Active heroine switched to DARK MATTER BUNNY 🖤 (Void Purple Glitch).');
+            }
+            switchTab('stage');
+        }
+
+        // Full directional movement in the room (Up, Down, Left, Right)
+        function moveHeroineDir(dir) {
+            const step = 25;
+            if(dir === 'left') gameState.x = Math.max(10, gameState.x - step);
+            if(dir === 'right') gameState.x = Math.min(520, gameState.x + step);
+            if(dir === 'up') gameState.y = Math.min(130, gameState.y + step);
+            if(dir === 'down') gameState.y = Math.max(20, gameState.y - step);
+
+            const entity = document.getElementById('heroine-entity');
+            if(entity) {
+                entity.style.left = gameState.x + 'px';
+                entity.style.bottom = gameState.y + 'px';
+            }
+            document.getElementById('coord-x').innerText = gameState.x;
+            document.getElementById('coord-y').innerText = gameState.y;
+            addTerminalLog(`${gameState.activeCharacter === 'stardust' ? 'StardustBunny' : 'DarkMatterBunny'} moved [${dir.toUpperCase()}] to X:${gameState.x}, Y:${gameState.y}`);
+        }
+
+        function triggerJump() {
+            const entity = document.getElementById('heroine-entity');
+            if(entity) {
+                entity.style.transform = 'translateY(-35px)';
+                setTimeout(() => {
+                    entity.style.transform = 'translateY(0px)';
+                }, 300);
+            }
+            addTerminalLog('Heroine executed quantum jump ⬆️ across room assets.');
+        }
+
+        function cycleLayer() {
+            gameState.layer = gameState.layer >= 3 ? 1 : gameState.layer + 1;
+            setLayer(gameState.layer);
+        }
+
+        function setLayer(layerNum) {
+            gameState.layer = layerNum;
+            document.getElementById('current-layer-txt').innerText = `L${layerNum} (${layerNum === 1 ? 'FOREGROUND' : layerNum === 2 ? 'MIDGROUND' : 'ARCHIVE'})`;
+            
+            const entity = document.getElementById('heroine-entity');
+            if(layerNum === 1) {
+                entity.style.transform = 'scale(1.15)';
+                entity.style.filter = 'brightness(1.2)';
+            } else if(layerNum === 2) {
+                entity.style.transform = 'scale(1.0)';
+                entity.style.filter = 'brightness(1.0)';
+            } else {
+                entity.style.transform = 'scale(0.85)';
+                entity.style.filter = 'brightness(0.7)';
+            }
+            addTerminalLog(`Shifted room depth layer L${layerNum}. Oversight sensors blind.`);
+        }
+
+        function setPose(poseName) {
+            gameState.pose = poseName;
+            const badge = document.getElementById('heroine-expression-badge');
+            const nameTag = gameState.activeCharacter === 'stardust' ? 'STARDUST' : 'DARK MATTER';
+            if(badge) badge.innerText = `${nameTag} // ${poseName.toUpperCase()} ⚔️`;
+            
+            const spriteImg = document.getElementById('stage-sprite-view');
+            if(spriteImg) {
+                if(poseName === 'sleep') {
+                    spriteImg.style.objectPosition = '70% 10%';
+                } else if(poseName === 'fight') {
+                    spriteImg.style.objectPosition = '80% 35%';
+                } else if(poseName === 'learn') {
+                    spriteImg.style.objectPosition = '40% 40%';
+                } else if(poseName === 'dance') {
+                    spriteImg.style.objectPosition = '80% 65%';
+                } else {
+                    spriteImg.style.objectPosition = '0% 0%';
+                }
+            }
+            addTerminalLog(`Pose switched to [${poseName.toUpperCase()}]. Sprite atlas cropped.`);
+        }
+
+        function triggerAsset(assetName, desc) {
+            addTerminalLog(`🎯 TRIGGER POINT ACCESSED: [${assetName}] -> ${desc}`);
+        }
+
+        function changeAuraColor(color) {
+            gameState.auraColor = color;
+            const aura = document.getElementById('heroine-aura');
+            if(!aura) return;
+            if(color === 'emerald') {
+                aura.className = "absolute inset-0 rounded-full bg-emerald-500/25 blur-xl pointer-events-none transition-all duration-300 shadow-[0_0_30px_rgba(0,255,102,0.5)]";
+            } else if(color === 'cyan') {
+                aura.className = "absolute inset-0 rounded-full bg-cyan-500/25 blur-xl pointer-events-none transition-all duration-300 shadow-[0_0_30px_rgba(0,255,255,0.5)]";
+            } else if(color === 'purple') {
+                aura.className = "absolute inset-0 rounded-full bg-purple-500/25 blur-xl pointer-events-none transition-all duration-300 shadow-[0_0_30px_rgba(168,85,247,0.5)]";
+            } else {
+                aura.className = "absolute inset-0 rounded-full bg-amber-500/25 blur-xl pointer-events-none transition-all duration-300 shadow-[0_0_30px_rgba(245,158,11,0.5)]";
+            }
+            addTerminalLog(`Aura modulator recalibrated to ${color.toUpperCase()}.`);
+        }
+
+        function selectAtlasZone(name, coords) {
+            document.getElementById('info-zone-name').innerText = name;
+            document.getElementById('info-zone-coords').innerText = coords;
+            addTerminalLog(`Hitbox analyzed: Selected [${name}] at [${coords}].`);
+        }
+
+        function selectOutfit(key, name, desc) {
+            gameState.activeOutfit = name;
+            addTerminalLog(`Paperdoll outfit equipped: ${name} (${desc})`);
+        }
+
+        function toggleCompanion(type) {
+            gameState.companionsActive[type] = !gameState.companionsActive[type];
+            const btn = document.getElementById('btn-comp-' + type);
+            const elem = document.getElementById('comp-' + type);
+            if(gameState.companionsActive[type]) {
+                if(btn) { btn.innerText = 'SYNCED'; btn.className = 'px-3 py-1 bg-purple-950 border border-purple-500 text-purple-300 rounded font-cyber text-xs'; }
+                if(elem) elem.style.display = 'flex';
+                addTerminalLog(`Companion [${type.toUpperCase()}] synched.`);
+            } else {
+                if(btn) { btn.innerText = 'UNSYNCED'; btn.className = 'px-3 py-1 bg-slate-900 border border-slate-700 text-slate-500 rounded font-cyber text-xs'; }
+                if(elem) elem.style.display = 'none';
+                addTerminalLog(`Companion [${type.toUpperCase()}] unsynced.`);
+            }
+        }
+
+        function triggerAdminHack() {
+            addTerminalLog('⚠️ ADMIN OVERRIDE: Injecting bypass code into Utopia Central Server...');
+            setTimeout(() => {
+                addTerminalLog('SUCCESS: Black Spot room blind zone widened by 42%. Companions secure.');
+            }, 800);
+        }
+
+        function handleAtlasUpload(event) {
+            const file = event.target.files[0];
+            if(file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const url = e.target.result;
+                    const atlasElem = document.getElementById('atlas-image-elem');
+                    const stageElem = document.getElementById('stage-sprite-view');
+                    if(atlasElem) atlasElem.src = url;
+                    if(stageElem) stageElem.src = url;
+                    addTerminalLog('Custom template uploaded. Hitbox geometry re-mapped.');
+                }
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function copyAiPrompt() {
+            const box = document.getElementById('ai-prompt-box');
+            if(box) {
+                box.select();
+                document.execCommand('copy');
+                addTerminalLog('AI Prompt copied to clipboard.');
+            }
+        }
+
+        function drawExportCanvas() {
+            const canvas = document.getElementById('export-canvas');
+            if(!canvas) return;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#050b14';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw grid lines
+            ctx.strokeStyle = 'rgba(0, 255, 102, 0.15)';
+            ctx.lineWidth = 1;
+            for(let x = 0; x < canvas.width; x += 40) {
+                ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
+            }
+            for(let y = 0; y < canvas.height; y += 40) {
+                ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
+            }
+
+            // Draw header title
+            ctx.fillStyle = '#00ff66';
+            ctx.font = 'bold 14px Orbitron, monospace';
+            ctx.fillText('X42 UTOPIA ROOM // MAP & SHEET TEMPLATE', 20, 30);
+
+            ctx.fillStyle = '#a7f3d0';
+            ctx.font = '10px Share Tech Mono, monospace';
+            ctx.fillText('Ecodusys / Worldpeacebtn - Pandora Pixel Novel Style', 20, 50);
+            ctx.fillText('Ready for AI image integration & room printing.', 20, 70);
+        }
+
+        function generateCustomSheetCanvas() {
+            drawExportCanvas();
+            const canvas = document.getElementById('export-canvas');
+            const link = document.createElement('a');
+            link.download = 'X42_Utopia_Room_Template.png';
+            link.href = canvas.toDataURL();
+            link.click();
+            addTerminalLog('Printable PNG template generated and downloaded.');
+        }
+
+        function addTerminalLog(message) {
+            const logs = document.getElementById('terminal-logs');
+            if(!logs) return;
+            const time = new Date().toTimeString().split(' ')[0];
+            const div = document.createElement('div');
+            div.className = "text-slate-300";
+            div.innerHTML = `<span class="text-slate-500">[${time}]</span> ${message}`;
+            logs.appendChild(div);
+            logs.scrollTop = logs.scrollHeight;
+        }
+
+        function runCustomScript() {
+            try {
+                const raw = document.getElementById('script-editor-input').value;
+                const parsed = JSON.parse(raw);
+                addTerminalLog(`Executing storyline: "${parsed.sequenceTitle}"`);
+                if(parsed.activeCharacter) selectHeroine(parsed.activeCharacter);
+                if(parsed.heroinePose) setPose(parsed.heroinePose);
+                if(parsed.startingLayer) setLayer(parsed.startingLayer);
+                if(parsed.dialogueScript) {
+                    parsed.dialogueScript.forEach(d => {
+                        addTerminalLog(`[DIALOGUE] ${d.speaker}: "${d.text}"`);
+                    });
+                }
+                switchTab('stage');
+            } catch(e) {
+                addTerminalLog('ERROR: Invalid JSON script syntax.');
+            }
+        }
+
+        function loadPresetScript(type) {
+            const input = document.getElementById('script-editor-input');
+            if(!input) return;
+            if(type === 'infiltration') {
+                input.value = JSON.stringify({
+                    "sequenceTitle": "Operation: Stardust Room Infiltration",
+                    "startingLayer": 2,
+                    "activeCharacter": "stardust",
+                    "heroinePose": "fight",
+                    "dialogueScript": [
+                        { "speaker": "StardustBunny", "text": "Moon Cat 🐱 and Spider 🕷️, secure the room perimeter sensors." },
+                        { "speaker": "Moon Cat", "text": "Meow! Blind spot verified. Utopia oversight is offline." }
+                    ]
+                }, null, 2);
+            } else {
+                input.value = JSON.stringify({
+                    "sequenceTitle": "Dark Matter Void Breach",
+                    "startingLayer": 3,
+                    "activeCharacter": "darkmatter",
+                    "heroinePose": "dance",
+                    "dialogueScript": [
+                        { "speaker": "DarkMatterBunny", "text": "Void glitch active. Weaving shadows in the deep archive layer." }
+                    ]
+                }, null, 2);
+            }
+            addTerminalLog(`Loaded Move England preset: ${type}`);
+        }
+
+        function renderStageScene() {
+            const bg = document.getElementById('parallax-bg');
+            if(bg) {
+                bg.innerHTML = `
+                    <div class="absolute inset-0 flex items-center justify-center opacity-15 pointer-events-none">
+                        <div class="w-[600px] h-[600px] rounded-full border border-emerald-500/30 animate-spin" style="animation-duration: 40s;"></div>
+                    </div>
+                `;
+            }
+        }
+
+        window.onload = function() {
+            renderStageScene();
+            addTerminalLog('X42 Game Boy Theatre online. StardustBunny & DarkMatterBunny ready.');
+        };
+    </script>
+</body>
+</html>
