@@ -1,0 +1,1262 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Quantum Sims & Storyteller Studio V16</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        cyber: {
+                            bg: '#05040f',
+                            panel: '#0f0e24',
+                            border: '#8b5cf6',
+                            pink: '#ec4899',
+                            cyan: '#06b6d4',
+                            emerald: '#10b981',
+                            gold: '#f59e0b'
+                        }
+                    },
+                    boxShadow: {
+                        'neon-pink': '0 0 15px rgba(236, 72, 153, 0.5)',
+                        'neon-cyan': '0 0 15px rgba(6, 182, 212, 0.5)',
+                        'neon-purple': '0 0 15px rgba(139, 92, 246, 0.4)',
+                        'neon-gold': '0 0 15px rgba(245, 158, 11, 0.5)',
+                        'neon-emerald': '0 0 15px rgba(16, 185, 129, 0.5)',
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Fonts & Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Orbitron:wght@500;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Three.js & OrbitControls -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/OrbitControls.js"></script>
+
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #0b0921; color: #f3f4f6; overflow: hidden; margin: 0; touch-action: none; }
+        .font-orbitron { font-family: 'Orbitron', sans-serif; }
+        ::-webkit-scrollbar { width: 3px; height: 3px; }
+        ::-webkit-scrollbar-track { background: rgba(15, 14, 36, 0.9); }
+        ::-webkit-scrollbar-thumb { background: #ec4899; border-radius: 3px; }
+        
+        .glass-panel {
+            background: rgba(15, 13, 38, 0.92);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(236, 72, 153, 0.35);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7);
+        }
+        
+        .emoji-btn { transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); user-select: none; }
+        .emoji-btn:hover { transform: scale(1.12) translateY(-2px); }
+        .emoji-btn:active { transform: scale(0.95); }
+        
+        .grab-handle { cursor: grab; }
+        .grab-handle:active { cursor: grabbing; }
+        .panel-dragged { opacity: 0.97; box-shadow: 0 16px 45px rgba(0,0,0,0.85), 0 0 25px rgba(236, 72, 153, 0.5); z-index: 80 !important; }
+
+        #threeContainer { position: fixed; inset: 0; z-index: 0; outline: none; width: 100vw; height: 100vh; pointer-events: auto; background: #0b0921; }
+        canvas { display: block; width: 100% !important; height: 100% !important; pointer-events: auto; }
+
+        @keyframes plumbobSpin {
+            0% { transform: translateY(0px) rotateY(0deg); }
+            50% { transform: translateY(-8px) rotateY(180deg); }
+            100% { transform: translateY(0px) rotateY(360deg); }
+        }
+        .plumbob-float { animation: plumbobSpin 3s infinite ease-in-out; }
+
+        /* Joysticks and Action Wheels */
+        .joystick-base {
+            position: relative;
+            width: 110px;
+            height: 110px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(15, 13, 38, 0.9) 0%, rgba(6, 182, 212, 0.2) 100%);
+            border: 2px solid rgba(6, 182, 212, 0.5);
+            box-shadow: 0 0 20px rgba(6, 182, 212, 0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            touch-action: none;
+        }
+        .joystick-thumb {
+            position: absolute;
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #06b6d4, #8b5cf6);
+            box-shadow: 0 0 15px rgba(6, 182, 212, 0.8);
+            cursor: pointer;
+            transition: transform 0.05s linear;
+        }
+
+        .action-wheel {
+            position: relative;
+            width: 130px;
+            height: 130px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(15, 13, 38, 0.95) 0%, rgba(236, 72, 153, 0.25) 100%);
+            border: 2px solid rgba(236, 72, 153, 0.6);
+            box-shadow: 0 0 25px rgba(236, 72, 153, 0.5);
+        }
+        .wheel-btn {
+            position: absolute;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: rgba(15, 13, 38, 0.95);
+            border: 1.5px solid #ec4899;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(236, 72, 153, 0.6);
+            transform: translate(-50%, -50%);
+            transition: all 0.2s;
+        }
+        .wheel-btn:hover { transform: translate(-50%, -50%) scale(1.25); background: rgba(236, 72, 153, 0.4); }
+
+        .world-hud-tag {
+            position: absolute;
+            transform: translate(-50%, -100%);
+            pointer-events: auto;
+            transition: opacity 0.15s ease-out;
+            z-index: 25;
+        }
+
+        .voxel-pixel-cell {
+            width: 22px;
+            height: 22px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 4px;
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+        .voxel-pixel-cell:hover {
+            transform: scale(1.15);
+            border-color: #ec4899;
+        }
+    </style>
+</head>
+<body class="w-screen h-screen flex flex-col select-none">
+
+    <div id="threeContainer"></div>
+    <div id="worldHudContainer" class="absolute inset-0 pointer-events-none overflow-hidden z-25"></div>
+
+    <!-- Top Header Toolbar -->
+    <header class="absolute top-2 left-2 right-2 glass-panel rounded-2xl px-3 py-1.5 flex items-center justify-between z-40">
+        <div class="flex items-center space-x-2">
+            <div class="w-7 h-7 rounded-xl bg-gradient-to-br from-cyan-500 via-purple-500 to-pink-500 flex items-center justify-center text-sm shadow-neon-cyan emoji-btn" onclick="openPieMenu(window.innerWidth/2, window.innerHeight/2)">
+                🏡
+            </div>
+            <div>
+                <h1 class="font-orbitron font-extrabold text-[11px] tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-purple-300 to-pink-400 leading-none">
+                    QUANTUM SIMS & STORY STUDIO V16
+                </h1>
+                <p class="text-[7px] text-cyan-300/70 font-mono mt-0.5" id="statusText">✨ V16 Active • Directional Turn, 3D Voxel Sculptor & Limb Animator Ready</p>
+            </div>
+        </div>
+        
+        <div class="flex items-center space-x-1.5 py-0.5">
+            <button onclick="togglePanel('casPanel')" title="Character CAS & Elegant Proportions" class="emoji-btn w-8 h-8 rounded-xl bg-pink-900/40 border border-pink-500/40 flex items-center justify-center text-sm shadow-neon-pink">🧑‍🎤</button>
+            <button onclick="togglePanel('voxelEditorPanel')" title="3D Voxel Sculptor & Hair Maker" class="emoji-btn w-8 h-8 rounded-xl bg-purple-900/40 border border-purple-500/40 flex items-center justify-center text-sm shadow-neon-purple">🧱</button>
+            <button onclick="togglePanel('limbAnimatorPanel')" title="Advanced Limb Animation Studio" class="emoji-btn w-8 h-8 rounded-xl bg-cyan-900/40 border border-cyan-500/40 flex items-center justify-center text-sm shadow-neon-cyan">🦾</button>
+            <button onclick="togglePanel('observerCamPanel')" title="Observer & Free Camera" class="emoji-btn w-8 h-8 rounded-xl bg-cyan-900/30 border border-cyan-500/30 flex items-center justify-center text-sm">🎥</button>
+            <button onclick="togglePanel('simsPanel')" title="Sims & Needs" class="emoji-btn w-8 h-8 rounded-xl bg-emerald-900/40 border border-emerald-500/40 flex items-center justify-center text-sm shadow-neon-emerald">💚</button>
+            <button onclick="togglePanel('propCatalogPanel')" title="Build & Furniture" class="emoji-btn w-8 h-8 rounded-xl bg-cyan-900/30 border border-cyan-500/30 flex items-center justify-center text-sm">🛋️</button>
+            <button onclick="toggleGameLiveMode()" id="liveModeBtn" title="Play Live Mode & Joysticks" class="emoji-btn w-8 h-8 rounded-xl bg-gradient-to-r from-emerald-600 to-cyan-600 flex items-center justify-center text-sm shadow-neon-emerald">▶️</button>
+            <button onclick="toggleFxModal()" title="VFX Toggles" class="emoji-btn w-8 h-8 rounded-xl bg-purple-900/30 border border-purple-500/30 flex items-center justify-center text-xs">✨</button>
+        </div>
+    </header>
+
+    <!-- Character Editor (CAS) Panel with Elegant Proportions -->
+    <div id="casPanel" class="absolute top-14 left-2 w-80 glass-panel rounded-2xl flex flex-col z-30 transition-all duration-200 max-h-[80vh] hidden" onmousedown="preventCanvasFocus(event)">
+        <div class="grab-handle p-2.5 border-b border-pink-500/30 flex items-center justify-between bg-pink-950/50 rounded-t-2xl" onmousedown="startPanelDrag(event, 'casPanel')" ontouchstart="startPanelDrag(event, 'casPanel')">
+            <div class="flex items-center space-x-2">
+                <span class="text-sm">🧑‍🎤</span>
+                <span class="font-orbitron text-xs font-bold text-pink-200">Elegant CAS & Body Proportions</span>
+            </div>
+            <div class="flex items-center space-x-1.5">
+                <button onclick="minimizePanel('casPanel')" class="text-pink-400 hover:text-white text-xs px-1">_</button>
+                <button onclick="togglePanel('casPanel')" class="text-pink-400 hover:text-white text-xs px-1">✕</button>
+            </div>
+        </div>
+        <div class="p-3 overflow-y-auto space-y-3 flex-1 text-xs" onkeydown="event.stopPropagation()">
+            <div>
+                <label class="text-[9px] text-pink-300 font-medium">Sim Name</label>
+                <input type="text" id="casSimNameInput" value="Alex Vex" oninput="updateActiveSimName(this.value)" class="w-full mt-0.5 bg-pink-950/40 border border-pink-500/30 rounded-xl px-2 py-1 text-xs text-white">
+            </div>
+
+            <div class="grid grid-cols-2 gap-2">
+                <div>
+                    <label class="text-[9px] text-pink-300 font-medium">Skin Tone</label>
+                    <input type="color" id="casSkinColor" value="#f59e0b" onchange="updateSimMaterial('skin', this.value)" class="w-full h-7 rounded cursor-pointer bg-transparent mt-0.5">
+                </div>
+                <div>
+                    <label class="text-[9px] text-pink-300 font-medium">Hair Color</label>
+                    <input type="color" id="casHairColor" value="#ec4899" onchange="updateSimMaterial('hair', this.value)" class="w-full h-7 rounded cursor-pointer bg-transparent mt-0.5">
+                </div>
+                <div>
+                    <label class="text-[9px] text-pink-300 font-medium">Eyes Color</label>
+                    <input type="color" id="casEyeColor" value="#06b6d4" onchange="updateSimMaterial('eyes', this.value)" class="w-full h-7 rounded cursor-pointer bg-transparent mt-0.5">
+                </div>
+                <div>
+                    <label class="text-[9px] text-pink-300 font-medium">Outfit Color</label>
+                    <input type="color" id="casOutfitColor" value="#06b6d4" onchange="updateSimMaterial('outfit', this.value)" class="w-full h-7 rounded cursor-pointer bg-transparent mt-0.5">
+                </div>
+            </div>
+
+            <!-- Elegant Body Slenderness Slider -->
+            <div class="pt-2 border-t border-pink-500/30">
+                <div class="flex justify-between items-center mb-1">
+                    <label class="text-[9px] text-pink-300 font-medium">Slender Elegance & Height</label>
+                    <span id="slenderValLabel" class="text-[9px] text-pink-400 font-mono">1.2x</span>
+                </div>
+                <input type="range" id="slenderRange" min="0.8" max="1.5" step="0.05" value="1.2" oninput="updateBodyProportions(this.value)" class="w-full accent-pink-500 cursor-pointer">
+            </div>
+
+            <!-- Pre-created Hair Styles -->
+            <div class="pt-2 border-t border-pink-500/30">
+                <label class="text-[9px] text-pink-300 font-medium mb-1 block">Pre-created 3D Hairstyles</label>
+                <div class="grid grid-cols-3 gap-1.5">
+                    <button onclick="setPrecreatedHairstyle('cyber-spike')" class="emoji-btn py-1.5 rounded-xl bg-pink-600/30 border border-pink-500/30 text-[9px] text-pink-200 font-bold">⚡ Spikes</button>
+                    <button onclick="setPrecreatedHairstyle('sleek-bob')" class="emoji-btn py-1.5 rounded-xl bg-purple-600/30 border border-purple-500/30 text-[9px] text-purple-200 font-bold">💇 Sleek Bob</button>
+                    <button onclick="setPrecreatedHairstyle('mohawk')" class="emoji-btn py-1.5 rounded-xl bg-cyan-600/30 border border-cyan-500/30 text-[9px] text-cyan-200 font-bold">🔥 Mohawk</button>
+                    <button onclick="setPrecreatedHairstyle('dreadlocks')" class="emoji-btn py-1.5 rounded-xl bg-emerald-600/30 border border-emerald-500/30 text-[9px] text-emerald-200 font-bold">🌿 Dreads</button>
+                    <button onclick="setPrecreatedHairstyle('space-buns')" class="emoji-btn py-1.5 rounded-xl bg-pink-600/30 border border-pink-500/30 text-[9px] text-pink-200 font-bold">🌌 Buns</button>
+                    <button onclick="setPrecreatedHairstyle('cascading')" class="emoji-btn py-1.5 rounded-xl bg-purple-600/30 border border-purple-500/30 text-[9px] text-purple-200 font-bold">🌊 Long Flow</button>
+                </div>
+            </div>
+
+            <button onclick="spawnNewHumanoidSim()" class="w-full py-2 rounded-xl bg-gradient-to-r from-pink-600 to-purple-600 text-white font-bold text-xs shadow-neon-pink emoji-btn">➕ Spawn New Elegant Sim</button>
+        </div>
+    </div>
+
+    <!-- 3D Voxel Sculptor & Hair Maker Panel -->
+    <div id="voxelEditorPanel" class="absolute top-14 left-84 w-84 glass-panel rounded-2xl flex flex-col z-30 transition-all duration-200 max-h-[82vh] hidden" onmousedown="preventCanvasFocus(event)">
+        <div class="grab-handle p-2.5 border-b border-purple-500/30 flex items-center justify-between bg-purple-950/50 rounded-t-2xl" onmousedown="startPanelDrag(event, 'voxelEditorPanel')" ontouchstart="startPanelDrag(event, 'voxelEditorPanel')">
+            <div class="flex items-center space-x-2">
+                <span class="text-sm">🧱</span>
+                <span class="font-orbitron text-xs font-bold text-purple-200">3D Voxel Sculptor & Hair Maker</span>
+            </div>
+            <div class="flex items-center space-x-1.5">
+                <button onclick="minimizePanel('voxelEditorPanel')" class="text-purple-400 hover:text-white text-xs px-1">_</button>
+                <button onclick="togglePanel('voxelEditorPanel')" class="text-purple-400 hover:text-white text-xs px-1">✕</button>
+            </div>
+        </div>
+        <div class="p-3 overflow-y-auto space-y-3 flex-1 text-xs" onkeydown="event.stopPropagation()">
+            <p class="text-[9px] text-purple-300">Sculpt 3D voxel cubes directly onto character body parts or custom hair matrices:</p>
+            
+            <div class="flex items-center space-x-2 bg-purple-950/30 p-2 rounded-xl border border-purple-500/30">
+                <span class="text-[9px] text-purple-200 font-medium">Target Part:</span>
+                <select id="voxelTargetPart" onchange="switchVoxelGridPart(this.value)" class="bg-purple-950 border border-purple-500/40 rounded-lg px-2 py-1 text-xs text-white">
+                    <option value="hair">3D Hair Matrix</option>
+                    <option value="head">Head Cubes</option>
+                    <option value="torso">Torso Blocks</option>
+                </select>
+            </div>
+
+            <div class="flex items-center space-x-2 bg-purple-950/30 p-2 rounded-xl border border-purple-500/30">
+                <span class="text-[9px] text-purple-200 font-medium">Voxel Color:</span>
+                <input type="color" id="voxelBrushColor" value="#ec4899" class="w-8 h-7 rounded cursor-pointer bg-transparent">
+                <button onclick="fillVoxelGridColor()" class="emoji-btn px-2 py-1 bg-purple-600/40 border border-purple-500/40 text-[9px] rounded-lg text-purple-200 font-bold">Fill All</button>
+                <button onclick="clearVoxelGrid()" class="emoji-btn px-2 py-1 bg-red-950/40 border border-red-500/40 text-[9px] rounded-lg text-red-300 font-bold">Clear</button>
+            </div>
+
+            <!-- Voxel 6x6 Matrix Painter -->
+            <div class="flex flex-col items-center bg-black/40 p-3 rounded-xl border border-purple-500/30">
+                <div class="grid grid-cols-6 gap-1" id="voxelGridContainer">
+                    <!-- Generated via JS -->
+                </div>
+                <span class="text-[7px] text-purple-400 mt-2 font-mono">Click cells to add/sculpt 3D voxel blocks in real time</span>
+            </div>
+
+            <button onclick="apply3DVoxelSculptToSim()" class="w-full py-2 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold text-xs shadow-neon-purple emoji-btn">✨ Rebuild & Apply 3D Voxel Geometry</button>
+        </div>
+    </div>
+
+    <!-- Advanced Limb Animation Studio Panel -->
+    <div id="limbAnimatorPanel" class="absolute top-14 left-84 w-84 glass-panel rounded-2xl flex flex-col z-30 transition-all duration-200 max-h-[82vh] hidden" onmousedown="preventCanvasFocus(event)">
+        <div class="grab-handle p-2.5 border-b border-cyan-500/30 flex items-center justify-between bg-cyan-950/50 rounded-t-2xl" onmousedown="startPanelDrag(event, 'limbAnimatorPanel')" ontouchstart="startPanelDrag(event, 'limbAnimatorPanel')">
+            <div class="flex items-center space-x-2">
+                <span class="text-sm">🦾</span>
+                <span class="font-orbitron text-xs font-bold text-cyan-200">Advanced Limb Animation Studio</span>
+            </div>
+            <div class="flex items-center space-x-1.5">
+                <button onclick="minimizePanel('limbAnimatorPanel')" class="text-cyan-400 hover:text-white text-xs px-1">_</button>
+                <button onclick="togglePanel('limbAnimatorPanel')" class="text-cyan-400 hover:text-white text-xs px-1">✕</button>
+            </div>
+        </div>
+        <div class="p-3 overflow-y-auto space-y-3 flex-1 text-xs" onkeydown="event.stopPropagation()">
+            <p class="text-[9px] text-cyan-300">Independently control and keyframe all body limbs for custom poses and loops:</p>
+
+            <div class="space-y-2.5 bg-cyan-950/20 p-2.5 rounded-xl border border-cyan-500/30">
+                <!-- Left Arm -->
+                <div>
+                    <div class="flex justify-between text-[9px] text-cyan-200 mb-0.5">
+                        <span>💪 Left Arm Pitch</span><span id="valLeftArm">0°</span>
+                    </div>
+                    <input type="range" min="-180" max="180" value="0" oninput="setLimbAngle('leftArm', this.value)" class="w-full accent-cyan-400 cursor-pointer">
+                </div>
+                <!-- Right Arm -->
+                <div>
+                    <div class="flex justify-between text-[9px] text-cyan-200 mb-0.5">
+                        <span>💪 Right Arm Pitch</span><span id="valRightArm">0°</span>
+                    </div>
+                    <input type="range" min="-180" max="180" value="0" oninput="setLimbAngle('rightArm', this.value)" class="w-full accent-cyan-400 cursor-pointer">
+                </div>
+                <!-- Left Leg -->
+                <div>
+                    <div class="flex justify-between text-[9px] text-cyan-200 mb-0.5">
+                        <span>🦵 Left Leg Pitch</span><span id="valLeftLeg">0°</span>
+                    </div>
+                    <input type="range" min="-90" max="90" value="0" oninput="setLimbAngle('leftLeg', this.value)" class="w-full accent-cyan-400 cursor-pointer">
+                </div>
+                <!-- Right Leg -->
+                <div>
+                    <div class="flex justify-between text-[9px] text-cyan-200 mb-0.5">
+                        <span>🦵 Right Leg Pitch</span><span id="valRightLeg">0°</span>
+                    </div>
+                    <input type="range" min="-90" max="90" value="0" oninput="setLimbAngle('rightLeg', this.value)" class="w-full accent-cyan-400 cursor-pointer">
+                </div>
+                <!-- Head Tilt -->
+                <div>
+                    <div class="flex justify-between text-[9px] text-cyan-200 mb-0.5">
+                        <span>🗣️ Head Tilt</span><span id="valHead">0°</span>
+                    </div>
+                    <input type="range" min="-45" max="45" value="0" oninput="setLimbAngle('head', this.value)" class="w-full accent-cyan-400 cursor-pointer">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2">
+                <button onclick="triggerSimAnim('dance')" class="emoji-btn py-2 rounded-xl bg-pink-600/40 border border-pink-500/40 text-[9px] text-pink-200 font-bold">💃 Dance Loop</button>
+                <button onclick="resetLimbsPose()" class="emoji-btn py-2 rounded-xl bg-cyan-600/40 border border-cyan-500/40 text-[9px] text-cyan-200 font-bold">🔄 Reset Pose</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Observer Camera Panel -->
+    <div id="observerCamPanel" class="absolute top-14 left-84 w-76 glass-panel rounded-2xl flex flex-col z-30 transition-all duration-200 max-h-[75vh] hidden" onmousedown="preventCanvasFocus(event)">
+        <div class="grab-handle p-2.5 border-b border-cyan-500/30 flex items-center justify-between bg-cyan-950/50 rounded-t-2xl" onmousedown="startPanelDrag(event, 'observerCamPanel')" ontouchstart="startPanelDrag(event, 'observerCamPanel')">
+            <div class="flex items-center space-x-2">
+                <span class="text-sm">🎥</span>
+                <span class="font-orbitron text-xs font-bold text-cyan-200">Observer & Free Camera</span>
+            </div>
+            <div class="flex items-center space-x-1.5">
+                <button onclick="minimizePanel('observerCamPanel')" class="text-cyan-400 hover:text-white text-xs px-1">_</button>
+                <button onclick="togglePanel('observerCamPanel')" class="text-cyan-400 hover:text-white text-xs px-1">✕</button>
+            </div>
+        </div>
+        <div class="p-3 overflow-y-auto space-y-3 flex-1 text-xs" onkeydown="event.stopPropagation()">
+            <p class="text-[9px] text-cyan-300">Switch camera perspectives:</p>
+            <div class="grid grid-cols-1 gap-2">
+                <button onclick="setCameraMode('orbit')" class="emoji-btn py-2 rounded-xl bg-cyan-600/30 border border-cyan-500/40 text-xs text-cyan-200 font-bold flex items-center justify-center space-x-2">
+                    <span>👁️</span><span>Orbit View Cam</span>
+                </button>
+                <button onclick="setCameraMode('follow')" class="emoji-btn py-2 rounded-xl bg-purple-600/30 border border-purple-500/40 text-xs text-purple-200 font-bold flex items-center justify-center space-x-2">
+                    <span>🎬</span><span>Active Sim Follow Cam</span>
+                </button>
+                <button onclick="setCameraMode('drone')" class="emoji-btn py-2 rounded-xl bg-emerald-600/30 border border-emerald-500/40 text-xs text-emerald-200 font-bold flex items-center justify-center space-x-2">
+                    <span>🚁</span><span>Free Drone Observer Cam</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sims Needs Panel -->
+    <div id="simsPanel" class="absolute top-14 left-84 w-76 glass-panel rounded-2xl flex flex-col z-30 transition-all duration-200 max-h-[75vh] hidden" onmousedown="preventCanvasFocus(event)">
+        <div class="grab-handle p-2.5 border-b border-emerald-500/30 flex items-center justify-between bg-emerald-950/50 rounded-t-2xl" onmousedown="startPanelDrag(event, 'simsPanel')" ontouchstart="startPanelDrag(event, 'simsPanel')">
+            <div class="flex items-center space-x-2">
+                <span class="text-sm">💚</span>
+                <span class="font-orbitron text-xs font-bold text-emerald-200">Sims Needs & Status</span>
+            </div>
+            <div class="flex items-center space-x-1.5">
+                <button onclick="minimizePanel('simsPanel')" class="text-emerald-400 hover:text-white text-xs px-1">_</button>
+                <button onclick="togglePanel('simsPanel')" class="text-emerald-400 hover:text-white text-xs px-1">✕</button>
+            </div>
+        </div>
+        <div class="p-3 overflow-y-auto space-y-3 flex-1 text-xs" onkeydown="event.stopPropagation()">
+            <div class="space-y-2 bg-emerald-950/20 p-2.5 rounded-xl border border-emerald-500/20">
+                <div>
+                    <div class="flex justify-between text-[9px] mb-0.5 text-emerald-200">
+                        <span>🍔 Hunger</span><span id="statHungerVal">85%</span>
+                    </div>
+                    <div class="w-full h-1.5 bg-emerald-950 rounded-full overflow-hidden">
+                        <div id="barHunger" class="h-full bg-emerald-400 transition-all duration-300" style="width: 85%;"></div>
+                    </div>
+                </div>
+                <div>
+                    <div class="flex justify-between text-[9px] mb-0.5 text-emerald-200">
+                        <span>⚡ Energy</span><span id="statEnergyVal">90%</span>
+                    </div>
+                    <div class="w-full h-1.5 bg-emerald-950 rounded-full overflow-hidden">
+                        <div id="barEnergy" class="h-full bg-cyan-400 transition-all duration-300" style="width: 90%;"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+                <button onclick="boostNeed('Hunger')" class="emoji-btn py-1.5 rounded-xl bg-emerald-600/40 border border-emerald-500/40 text-[9px] text-emerald-200 font-bold">🍔 Eat Meal</button>
+                <button onclick="boostNeed('Fun')" class="emoji-btn py-1.5 rounded-xl bg-pink-600/40 border border-pink-500/40 text-[9px] text-pink-200 font-bold">🎮 Play Game</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Build Mode / Prop Catalog Panel -->
+    <div id="propCatalogPanel" class="absolute top-14 right-2 w-76 glass-panel rounded-2xl flex flex-col z-30 transition-all duration-200 max-h-[75vh] hidden" onmousedown="preventCanvasFocus(event)">
+        <div class="grab-handle p-2.5 border-b border-cyan-500/30 flex items-center justify-between bg-cyan-950/50 rounded-t-2xl" onmousedown="startPanelDrag(event, 'propCatalogPanel')" ontouchstart="startPanelDrag(event, 'propCatalogPanel')">
+            <div class="flex items-center space-x-2">
+                <span class="text-sm">🛋️</span>
+                <span class="font-orbitron text-xs font-bold text-cyan-200">Build Mode & Props</span>
+            </div>
+            <div class="flex items-center space-x-1.5">
+                <button onclick="minimizePanel('propCatalogPanel')" class="text-cyan-400 hover:text-white text-xs px-1">_</button>
+                <button onclick="togglePanel('propCatalogPanel')" class="text-cyan-400 hover:text-white text-xs px-1">✕</button>
+            </div>
+        </div>
+        <div class="p-3 overflow-y-auto space-y-2.5 flex-1 text-xs" onkeydown="event.stopPropagation()">
+            <p class="text-[9px] text-cyan-300">Select furniture or prop to spawn into your 3D room/stage:</p>
+            <div class="grid grid-cols-2 gap-2" id="propGridContainer"></div>
+        </div>
+    </div>
+
+    <!-- VFX Modal -->
+    <div id="fxModal" class="absolute inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center hidden" onmousedown="preventCanvasFocus(event)">
+        <div class="glass-panel border border-purple-500/60 rounded-3xl p-5 w-80 space-y-3 shadow-neon-purple" onkeydown="event.stopPropagation()">
+            <div class="flex items-center justify-between border-b border-purple-500/30 pb-2">
+                <span class="font-orbitron font-bold text-purple-200 text-xs">✨ VFX & Animation Toggles</span>
+                <button onclick="toggleFxModal()" class="text-purple-400 hover:text-white text-sm">✕</button>
+            </div>
+            <div class="space-y-2.5 text-xs">
+                <div class="flex items-center justify-between">
+                    <span class="text-purple-200">✨ Floating Plumbob</span>
+                    <input type="checkbox" id="togglePlumbob" checked onchange="togglePlumbobFX(this.checked)" class="accent-purple-500 w-4 h-4 cursor-pointer">
+                </div>
+                <div class="flex items-center justify-between">
+                    <span class="text-purple-200">💥 Particle Confetti Rain</span>
+                    <input type="checkbox" id="toggleParticles" checked onchange="toggleParticleFX(this.checked)" class="accent-purple-500 w-4 h-4 cursor-pointer">
+                </div>
+            </div>
+            <button onclick="toggleFxModal()" class="w-full py-2 rounded-xl bg-purple-600 font-bold text-white text-xs shadow-neon-purple emoji-btn">Apply Settings</button>
+        </div>
+    </div>
+
+    <!-- Game Live Mode HUD & Joysticks Overlay -->
+    <div id="gamepadHud" class="absolute bottom-16 left-4 right-4 flex justify-between items-end z-40 pointer-events-none hidden">
+        <!-- Left Virtual Movement Joystick -->
+        <div class="joystick-base pointer-events-auto" id="moveJoystickBase">
+            <div class="joystick-thumb" id="moveJoystickThumb"></div>
+        </div>
+
+        <!-- Right Spherical Action Wheel Joystick -->
+        <div class="action-wheel pointer-events-auto flex items-center justify-center" id="actionJoystickBase">
+            <div class="wheel-btn" style="top: 15%; left: 50%;" onclick="wheelAction('chat')" title="Chat">💬</div>
+            <div class="wheel-btn" style="top: 35%; left: 88%;" onclick="wheelAction('flirt')" title="Flirt">💖</div>
+            <div class="wheel-btn" style="top: 80%; left: 75%;" onclick="wheelAction('dance')" title="Dance">💃</div>
+            <div class="wheel-btn" style="top: 92%; left: 50%;" onclick="wheelAction('eat')" title="Eat">🍔</div>
+            <div class="wheel-btn" style="top: 80%; left: 25%;" onclick="wheelAction('sleep')" title="Sleep">💤</div>
+            <div class="wheel-btn" style="top: 35%; left: 12%;" onclick="wheelAction('wave')" title="Wave">👋</div>
+            <div class="absolute w-10 h-10 rounded-full bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center text-sm shadow-neon-pink cursor-pointer" id="actionJoystickThumb">
+                🎮
+            </div>
+        </div>
+    </div>
+
+    <div id="toastNotification" class="absolute bottom-16 left-1/2 -translate-x-1/2 glass-panel border border-pink-500/50 px-3 py-1.5 rounded-xl text-xs text-pink-100 z-50 transition-all duration-300 opacity-0 pointer-events-none">
+        Notification
+    </div>
+
+    <footer class="absolute bottom-2.5 left-1/2 -translate-x-1/2 glass-panel rounded-2xl px-3 py-1.5 flex items-center space-x-2 z-40 shadow-xl">
+        <button onclick="setCameraMode('orbit')" id="modeBtn-orbit" class="emoji-btn px-3 py-1.5 rounded-xl bg-purple-600 text-white font-bold text-xs flex items-center space-x-1">
+            <span>👁️</span><span>View</span>
+        </button>
+        <button onclick="clearStage()" class="emoji-btn px-3 py-1.5 rounded-xl bg-red-950/40 border border-red-500/30 text-red-300 text-xs flex items-center space-x-1">
+            <span>🗑️</span><span>Clear</span>
+        </button>
+    </footer>
+
+    <script>
+        let scene, camera, renderer, orbitControls;
+        let stageObjects = [];
+        let activeObject = null;
+        let isGameLiveMode = false;
+        let cameraMode = 'orbit'; // orbit, follow, drone
+        let particleSystem = null;
+        let showPlumbobs = true;
+        let showParticles = true;
+
+        let propCatalog = [
+            { id: 'prop-sofa', name: 'Cyber Sofa', icon: '🛋️', type: 'sofa' },
+            { id: 'prop-bed', name: 'Sim Bed', icon: '🛏️', type: 'bed' },
+            { id: 'prop-tv', name: 'Plasma TV', icon: '📺', type: 'tv' },
+            { id: 'prop-fridge', name: 'Smart Fridge', icon: '🧊', type: 'fridge' },
+            { id: 'prop-plant', name: 'Neon Bonsai', icon: '🪴', type: 'plant' },
+            { id: 'prop-arcade', name: 'Arcade Cabinet', icon: '🕹️', type: 'arcade' }
+        ];
+
+        // 3D Voxel Sculptor & Hair Maker state (6x6 matrix per part)
+        let voxelGridState = {
+            hair: Array(36).fill('#ec4899'),
+            head: Array(36).fill('#f59e0b'),
+            torso: Array(36).fill('#06b6d4')
+        };
+        let currentVoxelPart = 'hair';
+
+        // Pre-created Hairstyles
+        const hairstylePresets = {
+            'cyber-spike': ['#ec4899','#ec4899','#ec4899','#ec4899','#ec4899','#ec4899', '#ec4899','#8b5cf6','#8b5cf6','#8b5cf6','#8b5cf6','#ec4899', '#ec4899','#8b5cf6','#06b6d4','#06b6d4','#8b5cf6','#ec4899'],
+            'sleek-bob': Array(36).fill('#8b5cf6'),
+            'mohawk': Array(36).fill('#06b6d4').map((c, i) => (i % 6 === 2 || i % 6 === 3) ? '#ec4899' : '#1f1a3a'),
+            'dreadlocks': Array(36).fill('#f59e0b').map((c, i) => (i % 2 === 0) ? '#d97706' : '#f59e0b'),
+            'space-buns': Array(36).fill('#ec4899').map((c, i) => (i < 6 || i > 30) ? '#06b6d4' : '#ec4899'),
+            'cascading': Array(36).fill('#10b981')
+        };
+
+        function preventCanvasFocus(e) {
+            e.stopPropagation();
+        }
+
+        function initThreeEngine() {
+            try {
+                const container = document.getElementById('threeContainer');
+                if (!container) return;
+                
+                const width = container.clientWidth || window.innerWidth;
+                const height = container.clientHeight || window.innerHeight;
+
+                scene = new THREE.Scene();
+                scene.background = new THREE.Color(0x0b0921);
+                scene.fog = new THREE.FogExp2(0x0b0921, 0.012);
+
+                camera = new THREE.PerspectiveCamera(60, width / height, 0.1, 1000);
+                camera.position.set(0, 5, 10);
+                camera.lookAt(0, 1, 0);
+
+                renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: "high-performance" });
+                renderer.setSize(width, height);
+                renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+                renderer.shadowMap.enabled = true;
+                renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+                
+                renderer.domElement.style.position = 'absolute';
+                renderer.domElement.style.inset = '0';
+                renderer.domElement.style.width = '100%';
+                renderer.domElement.style.height = '100%';
+                container.appendChild(renderer.domElement);
+
+                try {
+                    if (typeof THREE.OrbitControls !== 'undefined') {
+                        orbitControls = new THREE.OrbitControls(camera, renderer.domElement);
+                        orbitControls.enableDamping = true;
+                        orbitControls.dampingFactor = 0.05;
+                        orbitControls.target.set(0, 1, 0);
+                        orbitControls.update();
+                    }
+                } catch (e) { console.warn("OrbitControls warning:", e); }
+
+                const ambientLight = new THREE.AmbientLight(0xffffff, 2.5);
+                scene.add(ambientLight);
+
+                const mainDirLight = new THREE.DirectionalLight(0xffffff, 3.5);
+                mainDirLight.position.set(15, 25, 15);
+                mainDirLight.castShadow = true;
+                scene.add(mainDirLight);
+
+                const cyanPoint = new THREE.PointLight(0x06b6d4, 15.0, 40);
+                cyanPoint.position.set(-10, 8, -10);
+                scene.add(cyanPoint);
+
+                const pinkPoint = new THREE.PointLight(0xec4899, 15.0, 40);
+                pinkPoint.position.set(10, 8, 10);
+                scene.add(pinkPoint);
+
+                const floorGrid = new THREE.GridHelper(80, 80, 0x06b6d4, 0x3b2d68);
+                floorGrid.position.y = 0;
+                scene.add(floorGrid);
+
+                initParticleSystem();
+                initJoysticks();
+                initVoxelPainterGrid();
+
+                window.addEventListener('pointerdown', onPointerDown);
+                window.addEventListener('resize', onWindowResize);
+
+                spawnHumanoidSimAt(0, 0, 'Alex Vex', { skin: '#f59e0b', hair: '#ec4899', eyes: '#06b6d4', outfit: '#06b6d4' }, 1.2, 'cyber-spike');
+                spawnPropAt('prop-sofa', 3, 0);
+
+                renderPropCatalog();
+                animate();
+                document.getElementById('statusText').innerText = "✨ V16 Active • Directional turning & 3D voxel hair maker online";
+            } catch (err) {
+                console.error("Engine Init Error:", err);
+            }
+        }
+
+        function spawnHumanoidSimAt(x, z, name = 'Elegant Sim', colors = { skin: '#f59e0b', hair: '#ec4899', eyes: '#06b6d4', outfit: '#06b6d4' }, slenderScale = 1.2, hairStyle = 'cyber-spike') {
+            const group = new THREE.Group();
+
+            // Elegant Slender Torso
+            const torsoGeo = new THREE.BoxGeometry(0.5 * slenderScale, 1.15 * slenderScale, 0.28);
+            const torsoMat = new THREE.MeshStandardMaterial({ color: colors.outfit, roughness: 0.3 });
+            const torso = new THREE.Mesh(torsoGeo, torsoMat);
+            torso.position.y = 1.1 * slenderScale;
+            torso.name = 'torsoMesh';
+            torso.castShadow = true;
+            group.add(torso);
+
+            // Elegant Head
+            const headGeo = new THREE.BoxGeometry(0.44, 0.48, 0.44);
+            const headMat = new THREE.MeshStandardMaterial({ color: colors.skin, roughness: 0.4 });
+            const head = new THREE.Mesh(headGeo, headMat);
+            head.position.y = 1.85 * slenderScale;
+            head.name = 'headMesh';
+            head.castShadow = true;
+            group.add(head);
+
+            // Voxel / Custom Hair Group
+            const hairGroup = new THREE.Group();
+            hairGroup.name = 'hairGroup';
+            hairGroup.position.set(0, 1.95 * slenderScale, 0);
+            buildVoxelHairMesh(hairGroup, hairStyle, colors.hair);
+            group.add(hairGroup);
+
+            // Eyes
+            const eyeGeo = new THREE.BoxGeometry(0.08, 0.06, 0.03);
+            const eyeMat = new THREE.MeshStandardMaterial({ color: colors.eyes, roughness: 0.1, emissive: colors.eyes, emissiveIntensity: 0.5 });
+            
+            const leftEye = new THREE.Mesh(eyeGeo, eyeMat);
+            leftEye.position.set(-0.11, 1.86 * slenderScale, 0.23);
+            group.add(leftEye);
+
+            const rightEye = new THREE.Mesh(eyeGeo, eyeMat);
+            rightEye.position.set(0.11, 1.86 * slenderScale, 0.23);
+            group.add(rightEye);
+
+            // Limbs with dedicated pivot nodes for advanced animation
+            const limbMat = new THREE.MeshStandardMaterial({ color: colors.outfit, roughness: 0.4 });
+            
+            const leftArmGroup = new THREE.Group();
+            leftArmGroup.position.set(-0.35 * slenderScale, 1.5 * slenderScale, 0);
+            leftArmGroup.name = 'leftArmGroup';
+            const leftArmMesh = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.95 * slenderScale, 0.18), limbMat);
+            leftArmMesh.position.y = -0.45;
+            leftArmGroup.add(leftArmMesh);
+            group.add(leftArmGroup);
+
+            const rightArmGroup = new THREE.Group();
+            rightArmGroup.position.set(0.35 * slenderScale, 1.5 * slenderScale, 0);
+            rightArmGroup.name = 'rightArmGroup';
+            const rightArmMesh = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.95 * slenderScale, 0.18), limbMat);
+            rightArmMesh.position.y = -0.45;
+            rightArmGroup.add(rightArmMesh);
+            group.add(rightArmGroup);
+
+            const legMat = new THREE.MeshStandardMaterial({ color: 0x1e1b4b, roughness: 0.5 });
+            
+            const leftLegGroup = new THREE.Group();
+            leftLegGroup.position.set(-0.14, 0.95 * slenderScale, 0);
+            leftLegGroup.name = 'leftLegGroup';
+            const leftLegMesh = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.98 * slenderScale, 0.22), legMat);
+            leftLegMesh.position.y = -0.5;
+            leftLegGroup.add(leftLegMesh);
+            group.add(leftLegGroup);
+
+            const rightLegGroup = new THREE.Group();
+            rightLegGroup.position.set(0.14, 0.95 * slenderScale, 0);
+            rightLegGroup.name = 'rightLegGroup';
+            const rightLegMesh = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.98 * slenderScale, 0.22), legMat);
+            rightLegMesh.position.y = -0.5;
+            rightLegGroup.add(rightLegMesh);
+            group.add(rightLegGroup);
+
+            // Floating Plumbob
+            const plumbobGeo = new THREE.OctahedronGeometry(0.32);
+            const plumbobMat = new THREE.MeshBasicMaterial({ color: 0x10b981 });
+            const plumbobMesh = new THREE.Mesh(plumbobGeo, plumbobMat);
+            plumbobMesh.position.y = 2.8 * slenderScale;
+            group.add(plumbobMesh);
+
+            group.position.set(x, 0, z);
+            group.userData = {
+                id: '_' + Math.random().toString(36).substr(2, 9),
+                name: name,
+                type: 'sim',
+                plumbobMesh: plumbobMesh,
+                colors: colors,
+                slenderScale: slenderScale,
+                hairStyle: hairStyle,
+                needs: { hunger: 85, energy: 90, fun: 75, social: 80 },
+                dialogueText: "Hello from Slim V16 Studio!"
+            };
+
+            scene.add(group);
+            stageObjects.push(group);
+            setActiveObject(group);
+            showToast(`✨ Spawned Elegant Sim "${name}"!`);
+        }
+
+        function buildVoxelHairMesh(hairGroup, hairStyle, defaultColor) {
+            while(hairGroup.children.length > 0) {
+                hairGroup.remove(hairGroup.children[0]);
+            }
+
+            const colorsArr = hairstylePresets[hairStyle] || voxelGridState.hair;
+            const cubeGeo = new THREE.BoxGeometry(0.08, 0.08, 0.08);
+
+            for (let i = 0; i < colorsArr.length; i++) {
+                if (colorsArr[i] === '#1f1a3a') continue;
+                const mat = new THREE.MeshStandardMaterial({ color: colorsArr[i] || defaultColor, roughness: 0.4 });
+                const cube = new THREE.Mesh(cubeGeo, mat);
+                
+                const row = Math.floor(i / 6);
+                const col = i % 6;
+                cube.position.set((col - 2.5) * 0.08, (row * 0.08), (col % 2 === 0 ? 0.05 : -0.05));
+                hairGroup.add(cube);
+            }
+        }
+
+        function setPrecreatedHairstyle(style) {
+            if (!activeObject || activeObject.userData.type !== 'sim') return;
+            activeObject.userData.hairStyle = style;
+            const hairGroup = activeObject.getObjectByName('hairGroup');
+            if (hairGroup) {
+                buildVoxelHairMesh(hairGroup, style, activeObject.userData.colors.hair);
+            }
+            showToast(`✨ Applied 3D Hairstyle: ${style}`);
+        }
+
+        function updateBodyProportions(scaleVal) {
+            if (!activeObject || activeObject.userData.type !== 'sim') return;
+            activeObject.userData.slenderScale = parseFloat(scaleVal);
+            document.getElementById('slenderValLabel').innerText = scaleVal + 'x';
+            showToast(`✨ Updated Sim body proportions to ${scaleVal}x`);
+        }
+
+        function spawnNewHumanoidSim() {
+            spawnHumanoidSimAt(Math.random() * 4 - 2, Math.random() * 4 - 2, 'Sim ' + (stageObjects.length + 1));
+        }
+
+        function updateSimMaterial(part, colorVal) {
+            if (!activeObject || activeObject.userData.type !== 'sim') return;
+            activeObject.userData.colors[part] = colorVal;
+            
+            activeObject.traverse(child => {
+                if (part === 'skin' && child.name === 'headMesh') {
+                    child.material.color.set(colorVal);
+                } else if (part === 'eyes' && child.geometry && child.scale.x === 1 && child.position.z > 0.2) {
+                    child.material.color.set(colorVal);
+                    child.material.emissive.set(colorVal);
+                } else if (part === 'outfit' && (child.name === 'torsoMesh' || child.name.includes('Arm') || child.name.includes('Leg'))) {
+                    child.material.color.set(colorVal);
+                }
+            });
+            showToast(`✨ Updated Sim ${part} color!`);
+        }
+
+        function initVoxelPainterGrid() {
+            const container = document.getElementById('voxelGridContainer');
+            if (!container) return;
+            container.innerHTML = '';
+            for (let i = 0; i < 36; i++) {
+                const cell = document.createElement('div');
+                cell.className = 'voxel-pixel-cell';
+                cell.dataset.index = i;
+                cell.style.backgroundColor = voxelGridState[currentVoxelPart][i];
+                cell.onclick = () => {
+                    const brushColor = document.getElementById('voxelBrushColor').value;
+                    voxelGridState[currentVoxelPart][i] = brushColor;
+                    cell.style.backgroundColor = brushColor;
+                };
+                container.appendChild(cell);
+            }
+        }
+
+        function switchVoxelGridPart(part) {
+            currentVoxelPart = part;
+            const container = document.getElementById('voxelGridContainer');
+            if (!container) return;
+            const cells = container.children;
+            for (let i = 0; i < 36; i++) {
+                cells[i].style.backgroundColor = voxelGridState[currentVoxelPart][i];
+            }
+        }
+
+        function fillVoxelGridColor() {
+            const brushColor = document.getElementById('voxelBrushColor').value;
+            for (let i = 0; i < 36; i++) {
+                voxelGridState[currentVoxelPart][i] = brushColor;
+            }
+            switchVoxelGridPart(currentVoxelPart);
+            showToast(`🧱 Filled ${currentVoxelPart} voxel cubes!`);
+        }
+
+        function clearVoxelGrid() {
+            for (let i = 0; i < 36; i++) {
+                voxelGridState[currentVoxelPart][i] = '#1f1a3a';
+            }
+            switchVoxelGridPart(currentVoxelPart);
+            showToast(`🧹 Cleared ${currentVoxelPart} voxel grid.`);
+        }
+
+        function apply3DVoxelSculptToSim() {
+            if (!activeObject || activeObject.userData.type !== 'sim') {
+                showToast('⚠️ Please select a Sim first to apply voxel sculpture.');
+                return;
+            }
+            if (currentVoxelPart === 'hair') {
+                const hairGroup = activeObject.getObjectByName('hairGroup');
+                if (hairGroup) {
+                    while(hairGroup.children.length > 0) hairGroup.remove(hairGroup.children[0]);
+                    const cubeGeo = new THREE.BoxGeometry(0.08, 0.08, 0.08);
+                    for (let i = 0; i < 36; i++) {
+                        if (voxelGridState.hair[i] === '#1f1a3a') continue;
+                        const mat = new THREE.MeshStandardMaterial({ color: voxelGridState.hair[i], roughness: 0.4 });
+                        const cube = new THREE.Mesh(cubeGeo, mat);
+                        const row = Math.floor(i / 6);
+                        const col = i % 6;
+                        cube.position.set((col - 2.5) * 0.08, row * 0.08, 0);
+                        hairGroup.add(cube);
+                    }
+                }
+            }
+            showToast('✨ Successfully rebuilt 3D voxel geometry on Sim!');
+        }
+
+        function setLimbAngle(limbName, val) {
+            if (!activeObject || activeObject.userData.type !== 'sim') return;
+            const rad = THREE.MathUtils.degToRad(parseFloat(val));
+            
+            if (limbName === 'leftArm') {
+                const arm = activeObject.getObjectByName('leftArmGroup');
+                if (arm) arm.rotation.x = rad;
+                document.getElementById('valLeftArm').innerText = val + '°';
+            } else if (limbName === 'rightArm') {
+                const arm = activeObject.getObjectByName('rightArmGroup');
+                if (arm) arm.rotation.x = rad;
+                document.getElementById('valRightArm').innerText = val + '°';
+            } else if (limbName === 'leftLeg') {
+                const leg = activeObject.getObjectByName('leftLegGroup');
+                if (leg) leg.rotation.x = rad;
+                document.getElementById('valLeftLeg').innerText = val + '°';
+            } else if (limbName === 'rightLeg') {
+                const leg = activeObject.getObjectByName('rightLegGroup');
+                if (leg) leg.rotation.x = rad;
+                document.getElementById('valRightLeg').innerText = val + '°';
+            } else if (limbName === 'head') {
+                const head = activeObject.getObjectByName('headMesh');
+                if (head) head.rotation.y = rad;
+                document.getElementById('valHead').innerText = val + '°';
+            }
+        }
+
+        function resetLimbsPose() {
+            if (!activeObject || activeObject.userData.type !== 'sim') return;
+            ['leftArmGroup', 'rightArmGroup', 'leftLegGroup', 'rightLegGroup'].forEach(name => {
+                const node = activeObject.getObjectByName(name);
+                if (node) node.rotation.set(0, 0, 0);
+            });
+            const head = activeObject.getObjectByName('headMesh');
+            if (head) head.rotation.set(0, 0, 0);
+            showToast('🔄 Reset all limb poses.');
+        }
+
+        function setCameraMode(mode) {
+            cameraMode = mode;
+            showToast(`🎥 Camera mode: ${mode.toUpperCase()}`);
+        }
+
+        function triggerSimAnim(animType) {
+            if (!activeObject || activeObject.userData.type !== 'sim') return;
+            if (animType === 'dance') {
+                activeObject.userData.dialogueText = "🎵 Dancing with all limbs in sync!";
+                showToast("💃 Sim dance animation loop triggered!");
+            }
+        }
+
+        let moveVector = { x: 0, z: 0 };
+        let isMovingActive = false;
+
+        function initJoysticks() {
+            const base = document.getElementById('moveJoystickBase');
+            const thumb = document.getElementById('moveJoystickThumb');
+            let maxRadius = 35;
+
+            function handleMove(clientX, clientY) {
+                const rect = base.getBoundingClientRect();
+                const centerX = rect.left + rect.width / 2;
+                const centerY = rect.top + rect.height / 2;
+                let dx = clientX - centerX;
+                let dy = clientY - centerY;
+                let dist = Math.sqrt(dx * dx + dy * dy);
+
+                if (dist > maxRadius) {
+                    dx = (dx / dist) * maxRadius;
+                    dy = (dy / dist) * maxRadius;
+                }
+
+                thumb.style.transform = `translate(${dx}px, ${dy}px)`;
+                moveVector.x = dx / maxRadius;
+                moveVector.z = dy / maxRadius;
+                isMovingActive = true;
+            }
+
+            base.addEventListener('pointerdown', (e) => {
+                handleMove(e.clientX, e.clientY);
+                base.setPointerCapture(e.pointerId);
+            });
+            base.addEventListener('pointermove', (e) => {
+                if (isMovingActive) handleMove(e.clientX, e.clientY);
+            });
+            base.addEventListener('pointerup', (e) => {
+                thumb.style.transform = `translate(0px, 0px)`;
+                moveVector = { x: 0, z: 0 };
+                isMovingActive = false;
+            });
+        }
+
+        function wheelAction(action) {
+            if (!activeObject) return;
+            if (action === 'chat') activeObject.userData.dialogueText = "💬 Friendly chat!";
+            else if (action === 'flirt') activeObject.userData.dialogueText = "💖 Flirting vibes!";
+            else if (action === 'dance') triggerSimAnim('dance');
+            else if (action === 'eat') activeObject.userData.dialogueText = "🍔 Enjoying meal!";
+            else if (action === 'sleep') activeObject.userData.dialogueText = "💤 Taking a nap...";
+            else if (action === 'wave') activeObject.userData.dialogueText = "👋 Hello!";
+            showToast(`✨ Action executed: ${action}`);
+        }
+
+        function updateWorldHud() {
+            const container = document.getElementById('worldHudContainer');
+            if (!container) return;
+            container.innerHTML = '';
+
+            stageObjects.forEach(obj => {
+                if (obj.userData.type !== 'sim') return;
+
+                const pos = new THREE.Vector3();
+                obj.getWorldPosition(pos);
+                pos.y += 3.2 * (obj.userData.slenderScale || 1.2);
+
+                pos.project(camera);
+                const x = (pos.x *  .5 + .5) * window.innerWidth;
+                const y = (pos.y * -.5 + .5) * window.innerHeight;
+
+                if (pos.z < 1) {
+                    const tag = document.createElement('div');
+                    tag.className = 'world-hud-tag flex flex-col items-center';
+                    tag.style.left = x + 'px';
+                    tag.style.top = y + 'px';
+
+                    tag.innerHTML = `
+                        <div class="glass-panel border border-cyan-500/60 px-3 py-1 rounded-xl text-[9px] text-cyan-200 mb-1 shadow-neon-cyan whitespace-nowrap">
+                            💬 ${obj.userData.name}: ${obj.userData.dialogueText || 'Ready'}
+                        </div>
+                        <div class="w-20 h-1.5 bg-black/70 rounded-full overflow-hidden border border-emerald-500/40">
+                            <div class="h-full bg-emerald-400" style="width: ${obj.userData.needs.hunger}%;"></div>
+                        </div>
+                    `;
+                    container.appendChild(tag);
+                }
+            });
+        }
+
+        function initParticleSystem() {
+            const count = 300;
+            const geo = new THREE.BufferGeometry();
+            const pos = new Float32Array(count * 3);
+            for(let i=0; i<count*3; i+=3) {
+                pos[i] = (Math.random() - 0.5) * 40;
+                pos[i+1] = Math.random() * 15;
+                pos[i+2] = (Math.random() - 0.5) * 40;
+            }
+            geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+            const mat = new THREE.PointsMaterial({ color: 0x06b6d4, size: 0.2, transparent: true, opacity: 0.8 });
+            particleSystem = new THREE.Points(geo, mat);
+            scene.add(particleSystem);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const time = Date.now() * 0.003;
+
+            if (isGameLiveMode && activeObject && activeObject.userData.type === 'sim') {
+                if (moveVector.x !== 0 || moveVector.z !== 0) {
+                    activeObject.position.x += moveVector.x * 0.08;
+                    activeObject.position.z += moveVector.z * 0.08;
+
+                    // Character turns into the exact direction they run
+                    const targetRotation = Math.atan2(moveVector.x, moveVector.z);
+                    activeObject.rotation.y = THREE.MathUtils.lerp(activeObject.rotation.y, targetRotation, 0.2);
+
+                    // Procedural running limb swing
+                    const leftArm = activeObject.getObjectByName('leftArmGroup');
+                    const rightArm = activeObject.getObjectByName('rightArmGroup');
+                    const leftLeg = activeObject.getObjectByName('leftLegGroup');
+                    const rightLeg = activeObject.getObjectByName('rightLegGroup');
+
+                    if (leftArm) leftArm.rotation.x = Math.sin(time * 12) * 0.6;
+                    if (rightArm) rightArm.rotation.x = -Math.sin(time * 12) * 0.6;
+                    if (leftLeg) leftLeg.rotation.x = -Math.sin(time * 12) * 0.8;
+                    if (rightLeg) rightLeg.rotation.x = Math.sin(time * 12) * 0.8;
+                }
+            }
+
+            // Camera Tracking
+            if (cameraMode === 'follow' && activeObject) {
+                const targetPos = activeObject.position.clone();
+                camera.position.lerp(new THREE.Vector3(targetPos.x, targetPos.y + 3, targetPos.z + 5), 0.08);
+                camera.lookAt(targetPos);
+            } else if (cameraMode === 'drone') {
+                camera.position.x = Math.sin(time * 0.5) * 12;
+                camera.position.z = Math.cos(time * 0.5) * 12;
+                camera.position.y = 8;
+                camera.lookAt(0, 1, 0);
+            }
+
+            stageObjects.forEach((obj, idx) => {
+                if (obj.userData.type === 'sim' && !isGameLiveMode) {
+                    let stretch = 1 + Math.sin(time * 3 + idx) * 0.03;
+                    const torso = obj.getObjectByName('torsoMesh');
+                    if (torso) torso.scale.y = stretch;
+                }
+
+                if (obj.userData.plumbobMesh && showPlumbobs) {
+                    obj.userData.plumbobMesh.rotation.y += 0.04;
+                    obj.userData.plumbobMesh.position.y = (2.6 * (obj.userData.slenderScale || 1.2)) + Math.sin(time * 4) * 0.2;
+                }
+            });
+
+            if (particleSystem && showParticles) {
+                const arr = particleSystem.geometry.attributes.position.array;
+                for(let i=1; i<arr.length; i+=3) {
+                    arr[i] -= 0.02;
+                    if(arr[i] < 0) arr[i] = 15;
+                }
+                particleSystem.geometry.attributes.position.needsUpdate = true;
+            }
+
+            updateWorldHud();
+
+            if (orbitControls && cameraMode === 'orbit' && !isGameLiveMode) orbitControls.update();
+            if (renderer && scene && camera) renderer.render(scene, camera);
+        }
+
+        function onPointerDown(event) {
+            if (event.target.closest('.glass-panel') || event.target.closest('header') || event.target.closest('footer') || event.target.closest('#gamepadHud')) return;
+
+            const mouse = new THREE.Vector2();
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+            const raycaster = new THREE.Raycaster();
+            raycaster.setFromCamera(mouse, camera);
+
+            const intersects = raycaster.intersectObjects(stageObjects, true);
+            if (intersects.length > 0) {
+                let rootObj = intersects[0].object;
+                while (rootObj.parent && rootObj.parent !== scene) {
+                    rootObj = rootObj.parent;
+                }
+                setActiveObject(rootObj);
+            } else if (cameraMode === 'orbit') {
+                const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+                const target = new THREE.Vector3();
+                raycaster.ray.intersectPlane(plane, target);
+                spawnHumanoidSimAt(target.x, target.z, 'Sim ' + (stageObjects.length + 1));
+            }
+        }
+
+        function setActiveObject(obj) {
+            activeObject = obj;
+            if (obj.userData.type === 'sim') {
+                togglePanel('casPanel', true);
+                document.getElementById('casSimNameInput').value = obj.userData.name;
+                document.getElementById('slenderRange').value = obj.userData.slenderScale || 1.2;
+                document.getElementById('slenderValLabel').innerText = (obj.userData.slenderScale || 1.2) + 'x';
+            }
+        }
+
+        function spawnPropAt(propType, x, z) {
+            const group = new THREE.Group();
+            let geo, mat, name = 'Furniture Prop';
+
+            if (propType === 'prop-sofa') {
+                geo = new THREE.BoxGeometry(2.2, 0.9, 1.0);
+                mat = new THREE.MeshStandardMaterial({ color: 0xec4899, roughness: 0.4 });
+                name = 'Cyber Sofa';
+            } else if (propType === 'prop-bed') {
+                geo = new THREE.BoxGeometry(2.4, 0.8, 1.8);
+                mat = new THREE.MeshStandardMaterial({ color: 0x8b5cf6, roughness: 0.4 });
+                name = 'Sim Bed';
+            } else if (propType === 'prop-tv') {
+                geo = new THREE.BoxGeometry(1.8, 1.2, 0.3);
+                mat = new THREE.MeshStandardMaterial({ color: 0x06b6d4, roughness: 0.1, emissive: 0x06b6d4, emissiveIntensity: 0.6 });
+                name = 'Plasma TV';
+            } else {
+                geo = new THREE.BoxGeometry(1.2, 1.2, 1.2);
+                mat = new THREE.MeshStandardMaterial({ color: 0x10b981, roughness: 0.3 });
+                name = 'Neon Prop';
+            }
+
+            const mesh = new THREE.Mesh(geo, mat);
+            mesh.position.y = 0.5;
+            mesh.castShadow = true;
+            group.add(mesh);
+
+            group.position.set(x, 0, z);
+            group.userData = { id: '_' + Math.random().toString(36).substr(2, 9), name: name, type: 'prop' };
+
+            scene.add(group);
+            stageObjects.push(group);
+            showToast(`🛋️ Spawned "${name}"!`);
+        }
+
+        function boostNeed(needName) {
+            if (activeObject && activeObject.userData.needs) {
+                activeObject.userData.needs[needName.toLowerCase()] = Math.min(100, (activeObject.userData.needs[needName.toLowerCase()] || 50) + 25);
+            }
+            showToast(`✨ ${needName} boosted!`);
+        }
+
+        function renderPropCatalog() {
+            const grid = document.getElementById('propGridContainer');
+            if (!grid) return;
+            grid.innerHTML = propCatalog.map(prop => `
+                <div onclick="spawnPropAt('${prop.id}', 0, 0)" class="glass-panel border border-cyan-500/40 rounded-xl p-2.5 flex items-center space-x-2 cursor-pointer hover:border-cyan-400 transition-all emoji-btn">
+                    <span class="text-xl">${prop.icon}</span>
+                    <span class="text-[10px] text-cyan-200 font-medium">${prop.name}</span>
+                </div>
+            `).join('');
+        }
+
+        function toggleGameLiveMode() {
+            isGameLiveMode = !isGameLiveMode;
+            const btn = document.getElementById('liveModeBtn');
+            const hud = document.getElementById('gamepadHud');
+            if (isGameLiveMode) {
+                btn.className = "emoji-btn w-8 h-8 rounded-xl bg-gradient-to-r from-pink-600 to-purple-600 flex items-center justify-center text-sm shadow-neon-pink";
+                btn.innerHTML = `🛑`;
+                hud.classList.remove('hidden');
+                showToast('▶️ Live Play Mode & Directional Turn Active');
+            } else {
+                btn.className = "emoji-btn w-8 h-8 rounded-xl bg-gradient-to-r from-emerald-600 to-cyan-600 flex items-center justify-center text-sm shadow-neon-emerald";
+                btn.innerHTML = `▶️`;
+                hud.classList.add('hidden');
+                showToast('🛠️ Editor Mode Active');
+            }
+        }
+
+        function clearStage() {
+            stageObjects.forEach(obj => scene.remove(obj));
+            stageObjects = [];
+            activeObject = null;
+            showToast('🗑️ Stage cleared.');
+        }
+
+        function toggleFxModal() {
+            document.getElementById('fxModal').classList.toggle('hidden');
+        }
+
+        function togglePlumbobFX(val) {
+            showPlumbobs = val;
+            stageObjects.forEach(obj => {
+                if (obj.userData.plumbobMesh) obj.userData.plumbobMesh.visible = val;
+            });
+        }
+
+        function toggleParticleFX(val) {
+            showParticles = val;
+            if (particleSystem) particleSystem.visible = val;
+        }
+
+        let activeDragPanel = null;
+        let dragOffsetX = 0, dragOffsetY = 0;
+
+        function startPanelDrag(e, panelId) {
+            if (e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'RANGE') return;
+            activeDragPanel = document.getElementById(panelId);
+            activeDragPanel.classList.add('panel-dragged');
+
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            
+            const rect = activeDragPanel.getBoundingClientRect();
+            dragOffsetX = clientX - rect.left;
+            dragOffsetY = clientY - rect.top;
+
+            document.addEventListener('mousemove', onPanelDrag);
+            document.addEventListener('mouseup', stopPanelDrag);
+            document.addEventListener('touchmove', onPanelDrag, { passive: false });
+            document.addEventListener('touchend', stopPanelDrag);
+            e.preventDefault();
+        }
+
+        function onPanelDrag(e) {
+            if (!activeDragPanel) return;
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+            activeDragPanel.style.left = (clientX - dragOffsetX) + 'px';
+            activeDragPanel.style.top = (clientY - dragOffsetY) + 'px';
+            activeDragPanel.style.right = 'auto';
+            if (e.cancelable) e.preventDefault();
+        }
+
+        function stopPanelDrag() {
+            if (activeDragPanel) {
+                activeDragPanel.classList.remove('panel-dragged');
+                activeDragPanel = null;
+            }
+            document.removeEventListener('mousemove', onPanelDrag);
+            document.removeEventListener('mouseup', stopPanelDrag);
+            document.removeEventListener('touchmove', onPanelDrag);
+            document.removeEventListener('touchend', stopPanelDrag);
+        }
+
+        function togglePanel(panelId, forceState = null) {
+            const panel = document.getElementById(panelId);
+            const isHidden = forceState !== null ? !forceState : !panel.classList.contains('hidden');
+            if (isHidden) panel.classList.add('hidden');
+            else panel.classList.remove('hidden');
+        }
+
+        function minimizePanel(panelId) {
+            togglePanel(panelId, false);
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toastNotification');
+            if (!toast) return;
+            toast.innerText = msg;
+            toast.style.opacity = '1';
+            setTimeout(() => { toast.style.opacity = '0'; }, 2500);
+        }
+
+        function onWindowResize() {
+            if (!camera || !renderer) return;
+            const container = document.getElementById('threeContainer');
+            const width = container ? container.clientWidth : window.innerWidth;
+            const height = container ? container.clientHeight : window.innerHeight;
+            camera.aspect = width / height;
+            camera.updateProjectionMatrix();
+            renderer.setSize(width, height);
+        }
+
+        if (document.readyState === 'complete') {
+            initThreeEngine();
+        } else {
+            window.addEventListener('load', initThreeEngine);
+        }
+    </script>
+</body>
+</html>
