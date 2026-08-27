@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Quantum Paperdoll Theatre & Studio V7</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        cyber: {
+                            bg: '#05040f',
+                            panel: '#0f0e24',
+                            border: '#8b5cf6',
+                            pink: '#ec4899',
+                            cyan: '#06b6d4',
+                            emerald: '#10b981'
+                        }
+                    },
+                    boxShadow: {
+                        'neon-pink': '0 0 12px rgba(236, 72, 153, 0.4)',
+                        'neon-cyan': '0 0 12px rgba(6, 182, 212, 0.4)',
+                        'neon-purple': '0 0 12px rgba(139, 92, 246, 0.4)',
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Fonts & Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Orbitron:wght@500;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Three.js & Controls -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/TransformControls.js"></script>
+
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #05040f; color: #f3f4f6; overflow: hidden; margin: 0; touch-action: none; }
+        .font-orbitron { font-family: 'Orbitron', sans-serif; }
+        ::-webkit-scrollbar { width: 3px; height: 3px; }
+        ::-webkit-scrollbar-track { background: rgba(15, 14, 36, 0.8); }
+        ::-webkit-scrollbar-thumb { background: #8b5cf6; border-radius: 2px; }
+        
+        .glass-panel {
+            background: rgba(12, 11, 28, 0.92);
+            backdrop-filter: blur(14px);
+            border: 1px solid rgba(139, 92, 246, 0.25);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+        }
+        
+        .dock-btn { transition: all 0.15s ease; }
+        .dock-btn:hover { transform: translateY(-2px) scale(1.05); }
+        .grab-handle { cursor: grab; }
+        .grab-handle:active { cursor: grabbing; }
+        .scrub-number { cursor: ew-resize; user-select: none; }
+        .panel-dragged { opacity: 0.96; box-shadow: 0 12px 35px rgba(0,0,0,0.8), 0 0 15px rgba(139, 92, 246, 0.3); z-index: 70 !important; }
+
+        #threeContainer { position: absolute; inset: 0; z-index: 0; outline: none; }
+        .compact-grid { display: grid; gap: 4px; }
+    </style>
+</head>
+<body class="w-screen h-screen flex flex-col select-none">
+
+    <div id="threeContainer"></div>
+
+    <header class="absolute top-2 left-2 right-2 glass-panel rounded-xl px-2.5 py-1.5 flex items-center justify-between z-40">
+        <div class="flex items-center space-x-2">
+            <div class="w-6 h-6 rounded-md bg-gradient-to-br from-pink-500 to-cyan-500 flex items-center justify-center text-xs shadow-neon-pink">
+                🌌
+            </div>
+            <div>
+                <h1 class="font-orbitron font-bold text-[11px] tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-pink-400 to-cyan-400">
+                    QUANTUM V7 🎭
+                </h1>
+                <p class="text-[7px] text-purple-300/70 font-mono" id="cloudStatusText">Cloud Vault Ready</p>
+            </div>
+        </div>
+        
+        <!-- Ultra-compact Top Toolbar -->
+        <div class="flex items-center space-x-1">
+            <button onclick="togglePanel('libraryPanel')" title="Library & Assets" class="dock-btn px-2 py-1 rounded-lg bg-purple-900/40 border border-purple-500/30 text-xs flex items-center space-x-1 hover:bg-purple-600/30">
+                <span>📚</span><span class="text-[9px] hidden sm:inline text-purple-200">Library</span>
+            </button>
+            <button onclick="togglePanel('assetCreatorPanel')" title="Asset Creator" class="dock-btn px-2 py-1 rounded-lg bg-pink-900/40 border border-pink-500/30 text-xs flex items-center space-x-1 hover:bg-pink-600/30">
+                <span>🎨</span><span class="text-[9px] hidden sm:inline text-pink-200">Creator</span>
+            </button>
+            <button onclick="togglePanel('scenePanel')" title="Scene & Story" class="dock-btn px-2 py-1 rounded-lg bg-cyan-900/40 border border-cyan-500/30 text-xs flex items-center space-x-1 hover:bg-cyan-600/30">
+                <span>🎬</span><span class="text-[9px] hidden sm:inline text-cyan-200">Scenes</span>
+            </button>
+            <button onclick="togglePanel('inspectorPanel')" title="Inspector" class="dock-btn px-2 py-1 rounded-lg bg-emerald-900/40 border border-emerald-500/30 text-xs flex items-center space-x-1 hover:bg-emerald-600/30">
+                <span>🔍</span><span class="text-[9px] hidden sm:inline text-emerald-200">Inspect</span>
+            </button>
+            <button onclick="toggleFullscreen()" title="Fullscreen" class="dock-btn p-1.5 rounded-lg bg-purple-900/30 border border-purple-500/30 text-xs text-purple-300">
+                <span>⚡</span>
+            </button>
+        </div>
+    </header>
+
+
+    <!-- 1. LIBRARY & ASSET MANAGER PANEL -->
+    <div id="libraryPanel" class="absolute top-14 left-3 w-72 glass-panel rounded-2xl flex flex-col z-30 transition-all duration-200 max-h-[80vh]">
+        <div class="grab-handle p-2.5 border-b border-purple-500/20 flex items-center justify-between bg-purple-950/40 rounded-t-2xl">
+            <div class="flex items-center space-x-2">
+                <span class="text-sm">📚</span>
+                <span class="font-orbitron text-xs font-bold text-purple-200">Auto Library</span>
+            </div>
+            <div class="flex items-center space-x-1">
+                <button onclick="minimizePanel('libraryPanel')" class="text-purple-400 hover:text-white text-xs px-1">_</button>
+                <button onclick="togglePanel('libraryPanel')" class="text-purple-400 hover:text-white text-xs px-1">✕</button>
+            </div>
+        </div>
+        <div class="p-3 overflow-y-auto space-y-3 flex-1 text-xs">
+            <!-- Upload Dropzone -->
+            <div class="border-2 border-dashed border-purple-500/40 rounded-xl p-3 text-center bg-purple-950/20 hover:bg-purple-900/20 transition-all cursor-pointer relative" id="dropZone">
+                <input type="file" id="fileUploadInput" multiple accept="image/*" class="absolute inset-0 opacity-0 cursor-pointer" onchange="handleFileUpload(event)">
+                <div class="space-y-1">
+                    <span class="text-lg">📥</span>
+                    <p class="text-[10px] text-purple-200 font-medium">Drop Images or Click to Upload</p>
+                    <p class="text-[8px] text-purple-400">Auto-sorted into Textures & Characters</p>
+                </div>
+            </div>
+
+            <!-- Library Categories Tabs -->
+            <div class="flex space-x-1 bg-purple-950/60 p-1 rounded-lg">
+                <button onclick="switchLibTab('all')" id="libTab-all" class="flex-1 py-1 rounded bg-purple-600 text-white font-medium text-[10px]">All</button>
+                <button onclick="switchLibTab('texture')" id="libTab-texture" class="flex-1 py-1 rounded text-purple-300 text-[10px]">Textures</button>
+                <button onclick="switchLibTab('character')" id="libTab-character" class="flex-1 py-1 rounded text-purple-300 text-[10px]">Chars</button>
+                <button onclick="switchLibTab('object')" id="libTab-object" class="flex-1 py-1 rounded text-purple-300 text-[10px]">Objects</button>
+            </div>
+
+            <!-- Asset Grid Container -->
+            <div id="libraryAssetsGrid" class="grid grid-cols-3 gap-2 max-h-56 overflow-y-auto p-1">
+                <!-- Dynamically populated assets -->
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. ASSET CREATOR & SCULPTOR PANEL -->
+    <div id="assetCreatorPanel" class="absolute top-14 right-3 w-72 glass-panel rounded-2xl flex flex-col z-30 transition-all duration-200 max-h-[80vh] hidden">
+        <div class="grab-handle p-2.5 border-b border-pink-500/20 flex items-center justify-between bg-pink-950/40 rounded-t-2xl">
+            <div class="flex items-center space-x-2">
+                <span class="text-sm">🎨</span>
+                <span class="font-orbitron text-xs font-bold text-pink-200">Grid Asset Creator</span>
+            </div>
+            <div class="flex items-center space-x-1">
+                <button onclick="minimizePanel('assetCreatorPanel')" class="text-pink-400 hover:text-white text-xs px-1">_</button>
+                <button onclick="togglePanel('assetCreatorPanel')" class="text-pink-400 hover:text-white text-xs px-1">✕</button>
+            </div>
+        </div>
+        <div class="p-3 overflow-y-auto space-y-3 flex-1 text-xs">
+            <div>
+                <label class="text-[10px] text-pink-300 font-medium">Primitive Shape</label>
+                <div class="grid grid-cols-4 gap-1 mt-1">
+                    <button onclick="setCreatorShape('cube')" id="shapeBtn-cube" class="p-2 rounded-lg bg-pink-600/40 border border-pink-500 text-center font-bold text-[10px]">🧊 Cube</button>
+                    <button onclick="setCreatorShape('sphere')" id="shapeBtn-sphere" class="p-2 rounded-lg bg-pink-950/40 border border-pink-500/30 text-center font-bold text-[10px]">⚽ Sphere</button>
+                    <button onclick="setCreatorShape('cylinder')" id="shapeBtn-cylinder" class="p-2 rounded-lg bg-pink-950/40 border border-pink-500/30 text-center font-bold text-[10px]">🥫 Cylinder</button>
+                    <button onclick="setCreatorShape('paperdoll')" id="shapeBtn-paperdoll" class="p-2 rounded-lg bg-pink-950/40 border border-pink-500/30 text-center font-bold text-[10px]">📜 Paper</button>
+                </div>
+            </div>
+
+            <div class="space-y-2">
+                <div>
+                    <label class="text-[10px] text-pink-300 flex justify-between"><span>Object Name</span></label>
+                    <input type="text" id="newAssetName" value="Custom Asset 1" class="w-full mt-1 bg-pink-950/40 border border-pink-500/30 rounded-lg px-2 py-1 text-xs text-white">
+                </div>
+                <div>
+                    <label class="text-[10px] text-pink-300 flex justify-between"><span>Base Color / Tint</span></label>
+                    <input type="color" id="newAssetColor" value="#ec4899" class="w-full h-8 mt-1 rounded-lg bg-transparent cursor-pointer">
+                </div>
+                <div>
+                    <label class="text-[10px] text-pink-300 flex justify-between"><span>Glow Intensity</span><span id="glowValLabel">0.5</span></label>
+                    <input type="range" id="newAssetGlow" min="0" max="1" step="0.05" value="0.5" class="w-full accent-pink-500 mt-1" oninput="document.getElementById('glowValLabel').innerText=this.value">
+                </div>
+            </div>
+
+            <div class="pt-2 border-t border-pink-500/20 flex space-x-2">
+                <button onclick="spawnCreatedAsset()" class="flex-1 py-2 rounded-xl bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 font-bold text-white shadow-neon-pink text-xs">
+                    ✨ Spawn on Grid
+                </button>
+                <button onclick="saveCreatedAssetToLibrary()" class="px-3 py-2 rounded-xl bg-pink-950/60 border border-pink-500/40 hover:bg-pink-900/60 text-pink-200 text-xs" title="Save to Library">
+                    💾 Save
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. SCENE & STORY EDITOR PANEL -->
+    <div id="scenePanel" class="absolute top-14 left-80 w-72 glass-panel rounded-2xl flex flex-col z-30 transition-all duration-200 max-h-[80vh] hidden">
+        <div class="grab-handle p-2.5 border-b border-cyan-500/20 flex items-center justify-between bg-cyan-950/40 rounded-t-2xl">
+            <div class="flex items-center space-x-2">
+                <span class="text-sm">🎬</span>
+                <span class="font-orbitron text-xs font-bold text-cyan-200">Scene & Story Timeline</span>
+            </div>
+            <div class="flex items-center space-x-1">
+                <button onclick="minimizePanel('scenePanel')" class="text-cyan-400 hover:text-white text-xs px-1">_</button>
+                <button onclick="togglePanel('scenePanel')" class="text-cyan-400 hover:text-white text-xs px-1">✕</button>
+            </div>
+        </div>
+        <div class="p-3 overflow-y-auto space-y-3 flex-1 text-xs">
+            <div class="flex items-center justify-between">
+                <span class="text-[10px] text-cyan-300 font-medium">Active Scenes Sequence</span>
+                <button onclick="addNewScene()" class="px-2 py-1 rounded bg-cyan-600/40 border border-cyan-500/40 text-[10px] text-cyan-200 font-bold">+ Add Scene</button>
+            </div>
+
+            <div id="sceneListContainer" class="space-y-2 max-h-48 overflow-y-auto">
+                <!-- Dynamically populated scenes -->
+            </div>
+
+            <div class="pt-2 border-t border-cyan-500/20">
+                <label class="text-[10px] text-cyan-300 font-medium">Story Node Trigger Action</label>
+                <select id="storyTriggerAction" class="w-full mt-1 bg-cyan-950/40 border border-cyan-500/30 rounded-lg px-2 py-1 text-xs text-white">
+                    <option value="next_scene">Switch to Next Scene</option>
+                    <option value="dialogue">Trigger Popup Dialogue</option>
+                    <option value="spawn_effect">Particle Burst Effect</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <!-- 4. OBJECT INSPECTOR & ANIMATION PANEL -->
+    <div id="inspectorPanel" class="absolute top-14 right-80 w-72 glass-panel rounded-2xl flex flex-col z-30 transition-all duration-200 max-h-[80vh] hidden">
+        <div class="grab-handle p-2.5 border-b border-emerald-500/20 flex items-center justify-between bg-emerald-950/40 rounded-t-2xl">
+            <div class="flex items-center space-x-2">
+                <span class="text-sm">🔍</span>
+                <span class="font-orbitron text-xs font-bold text-emerald-200">Object Inspector</span>
+            </div>
+            <div class="flex items-center space-x-1">
+                <button onclick="minimizePanel('inspectorPanel')" class="text-emerald-400 hover:text-white text-xs px-1">_</button>
+                <button onclick="togglePanel('inspectorPanel')" class="text-emerald-400 hover:text-white text-xs px-1">✕</button>
+            </div>
+        </div>
+        <div class="p-3 overflow-y-auto space-y-3 flex-1 text-xs" id="inspectorContent">
+            <p class="text-purple-400 text-center py-6">Select an object on the 3D grid to inspect and animate.</p>
+        </div>
+    </div>
+
+    <footer class="absolute bottom-3 left-1/2 -translate-x-1/2 glass-panel rounded-2xl px-4 py-2 flex items-center space-x-3 z-40">
+        <button onclick="setInteractionMode('orbit')" id="modeBtn-orbit" class="dock-btn px-3 py-1.5 rounded-xl bg-purple-600 text-white font-bold text-xs flex items-center space-x-1">
+            <span>👁️</span><span>View</span>
+        </button>
+        <button onclick="setInteractionMode('move')" id="modeBtn-move" class="dock-btn px-3 py-1.5 rounded-xl bg-purple-950/60 border border-purple-500/30 text-purple-200 text-xs flex items-center space-x-1">
+            <span>✋</span><span>Move</span>
+        </button>
+        <button onclick="setInteractionMode('rotate')" id="modeBtn-rotate" class="dock-btn px-3 py-1.5 rounded-xl bg-purple-950/60 border border-purple-500/30 text-purple-200 text-xs flex items-center space-x-1">
+            <span>🔄</span><span>Rotate</span>
+        </button>
+        <button onclick="clearGrid()" class="dock-btn px-3 py-1.5 rounded-xl bg-red-950/40 border border-red-500/30 text-red-300 text-xs flex items-center space-x-1">
+            <span>🗑️</span><span>Clear</span>
+        </button>
+    </footer>
+
+    <!-- Toast Notification Banner -->
+    <div id="toastNotification" class="absolute bottom-16 left-1/2 -translate-x-1/2 glass-panel border border-purple-500/50 px-4 py-2 rounded-xl text-xs text-purple-100 z-50 transition-all duration-300 opacity-0 pointer-events-none">
+        Notification Message
+    </div>
+
+    <script>
+        // --- APP STATE & STORAGE ---
+        let scene, camera, renderer, orbitControls, transformControls;
+        let interactiveObjects = [];
+        let selectedObject = null;
+        let currentMode = 'orbit';
+        let currentShape = 'cube';
+        let activeLibTab = 'all';
+
+        // Library & Scenes Data
+        let userLibrary = [
+            { id: 'lib-1', name: 'Neon Cyber Grid', type: 'texture', url: 'https://placehold.co/512x512/0f0e24/ec4899?text=Cyber+Grid' },
+            { id: 'lib-2', name: 'Paperdoll Heroine', type: 'character', url: 'https://placehold.co/512x512/8b5cf6/ffffff?text=Heroine' },
+            { id: 'lib-3', name: 'Hologram Cube', type: 'object', url: 'https://placehold.co/512x512/06b6d4/05040f?text=Cube' }
+        ];
+
+        let storyScenes = [
+            { id: 'scene-1', name: 'Act I: The Neon Gateway', objectsCount: 0 },
+            { id: 'scene-2', name: 'Act II: Cybernetic Battlespace', objectsCount: 0 }
+        ];
+        let activeSceneIndex = 0;
+
+        // --- THREE.JS ENGINE SETUP ---
+        function initThreeEngine() {
+            const container = document.getElementById('threeContainer');
+            
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x05040f);
+            scene.fog = new THREE.FogExp2(0x05040f, 0.025);
+
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 5, 12);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.shadowMap.enabled = true;
+            container.appendChild(renderer.domElement);
+
+            // Controls
+            orbitControls = new THREE.OrbitControls(camera, renderer.domElement);
+            orbitControls.enableDamping = true;
+            orbitControls.dampingFactor = 0.05;
+
+            transformControls = new THREE.TransformControls(camera, renderer.domElement);
+            transformControls.addEventListener('dragging-changed', (event) => {
+                orbitControls.enabled = !event.value;
+            });
+            scene.add(transformControls);
+
+            // Lighting
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+            scene.add(ambientLight);
+
+            const dirLight = new THREE.DirectionalLight(0xec4899, 1.5);
+            dirLight.position.set(10, 20, 10);
+            scene.add(dirLight);
+
+            const cyanLight = new THREE.PointLight(0x06b6d4, 2, 30);
+            cyanLight.position.set(-10, 5, -10);
+            scene.add(cyanLight);
+
+            // Grid Theatre Floor
+            const gridHelper = new THREE.GridHelper(30, 30, 0x8b5cf6, 0x1f1b3c);
+            gridHelper.position.y = -0.01;
+            scene.add(gridHelper);
+
+            // Raycaster for object picking
+            window.addEventListener('pointerdown', onPointerDown);
+            window.addEventListener('resize', onWindowResize);
+
+            // Spawn initial default theatre object
+            spawnDefaultObject();
+            renderLibraryAssets();
+            renderScenesList();
+
+            animate();
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            // Animate objects with active animation behavior
+            const time = Date.now() * 0.002;
+            interactiveObjects.forEach(obj => {
+                if (obj.userData.anim === 'float') {
+                    obj.position.y = (obj.userData.baseY || 0) + Math.sin(time + (obj.userData.seed || 0)) * 0.5;
+                } else if (obj.userData.anim === 'rotate') {
+                    obj.rotation.y += 0.01;
+                } else if (obj.userData.anim === 'swing') {
+                    obj.rotation.z = Math.sin(time * 2) * 0.2;
+                }
+            });
+
+            orbitControls.update();
+            renderer.render(scene, camera);
+        }
+
+        // --- SPAWNING & ASSET CREATOR ---
+        function setCreatorShape(shape) {
+            currentShape = shape;
+            ['cube', 'sphere', 'cylinder', 'paperdoll'].forEach(s => {
+                const btn = document.getElementById(`shapeBtn-${s}`);
+                if (s === shape) {
+                    btn.className = "p-2 rounded-lg bg-pink-600 border border-pink-400 text-center font-bold text-[10px]";
+                } else {
+                    btn.className = "p-2 rounded-lg bg-pink-950/40 border border-pink-500/30 text-center font-bold text-[10px]";
+                }
+            });
+        }
+
+        function spawnCreatedAsset(textureUrl = null, assetName = null, shapeType = null) {
+            const name = assetName || document.getElementById('newAssetName').value;
+            const colorHex = document.getElementById('newAssetColor').value;
+            const glow = parseFloat(document.getElementById('newAssetGlow').value);
+            const shape = shapeType || currentShape;
+
+            let geometry;
+            if (shape === 'cube') geometry = new THREE.BoxGeometry(1.5, 1.5, 1.5);
+            else if (shape === 'sphere') geometry = new THREE.SphereGeometry(1, 32, 32);
+            else if (shape === 'cylinder') geometry = new THREE.CylinderGeometry(0.8, 0.8, 2, 32);
+            else geometry = new THREE.PlaneGeometry(2, 3); // Paperdoll
+
+            let material;
+            if (textureUrl) {
+                const textureLoader = new THREE.TextureLoader();
+                textureLoader.setCrossOrigin('anonymous');
+                const texture = textureLoader.load(textureUrl, undefined, undefined, () => {
+                    showToast('Failed to load image texture.');
+                });
+                material = new THREE.MeshStandardMaterial({ map: texture, roughness: 0.3, emissive: colorHex, emissiveIntensity: glow * 0.3 });
+            } else {
+                material = new THREE.MeshStandardMaterial({ color: colorHex, roughness: 0.2, metalness: 0.5, emissive: colorHex, emissiveIntensity: glow });
+            }
+
+            const mesh = new THREE.Mesh(geometry, material);
+            mesh.position.set((Math.random() - 0.5) * 6, 1, (Math.random() - 0.5) * 6);
+            mesh.castShadow = true;
+            mesh.receiveShadow = true;
+
+            // Make theatre paperdolls always face camera if paperdoll
+            mesh.userData = {
+                id: crypto.randomUUID(),
+                name: name,
+                shape: shape,
+                anim: 'none',
+                baseY: mesh.position.y,
+                seed: Math.random() * 10
+            };
+
+            scene.add(mesh);
+            interactiveObjects.push(mesh);
+            selectObject(mesh);
+            showToast(`Spawned "${name}" successfully!`);
+        }
+
+        function spawnDefaultObject() {
+            spawnCreatedAsset(null, 'Cyber Core', 'cube');
+        }
+
+        // --- INTERACTION & INSPECTOR ---
+        function onPointerDown(event) {
+            if (event.target.closest('#libraryPanel') || event.target.closest('#assetCreatorPanel') || event.target.closest('#scenePanel') || event.target.closest('#inspectorPanel') || event.target.closest('header') || event.target.closest('footer')) return;
+
+            const mouse = new THREE.Vector2();
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+            const raycaster = new THREE.Raycaster();
+            raycaster.setFromCamera(mouse, camera);
+
+            const intersects = raycaster.intersectObjects(interactiveObjects);
+            if (intersects.length > 0) {
+                selectObject(intersects[0].object);
+            }
+        }
+
+        function selectObject(obj) {
+            selectedObject = obj;
+            transformControls.attach(obj);
+            togglePanel('inspectorPanel', true);
+            updateInspectorUI();
+        }
+
+        function updateInspectorUI() {
+            if (!selectedObject) return;
+            const data = selectedObject.userData;
+            const container = document.getElementById('inspectorContent');
+            
+            container.innerHTML = `
+                <div class="space-y-2">
+                    <div>
+                        <label class="text-[10px] text-emerald-300 font-medium">Object Name</label>
+                        <input type="text" value="${data.name}" oninput="selectedObject.userData.name=this.value" class="w-full mt-1 bg-emerald-950/40 border border-emerald-500/30 rounded-lg px-2 py-1 text-xs text-white">
+                    </div>
+                    <div>
+                        <label class="text-[10px] text-emerald-300 font-medium">Assigned Animation</label>
+                        <select onchange="selectedObject.userData.anim=this.value" class="w-full mt-1 bg-emerald-950/40 border border-emerald-500/30 rounded-lg px-2 py-1 text-xs text-white">
+                            <option value="none" ${data.anim==='none'?'selected':''}>None (Static)</option>
+                            <option value="float" ${data.anim==='float'?'selected':''}>Floating / Hovering</option>
+                            <option value="rotate" ${data.anim==='rotate'?'selected':''}>Continuous Rotating</option>
+                            <option value="swing" ${data.anim==='swing'?'selected':''}>Swinging / Swaying</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-[10px] text-emerald-300 font-medium">Apply Skin from Library</label>
+                        <div class="grid grid-cols-3 gap-1 mt-1 max-h-24 overflow-y-auto">
+                            ${userLibrary.filter(item=>item.type==='texture'||item.type==='character').map(item => `
+                                <div onclick="applySkinToSelected('${item.url}')" class="cursor-pointer border border-emerald-500/30 rounded p-1 hover:bg-emerald-800/30 text-center">
+                                    <img src="${item.url}" class="w-full h-8 object-cover rounded">
+                                    <span class="text-[8px] truncate block text-emerald-200 mt-0.5">${item.name}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                    <div class="pt-2 border-t border-emerald-500/20 flex space-x-2">
+                        <button onclick="duplicateSelectedObject()" class="flex-1 py-1.5 rounded bg-emerald-600/40 border border-emerald-500/40 text-emerald-200 font-bold text-[10px]">📋 Duplicate</button>
+                        <button onclick="deleteSelectedObject()" class="flex-1 py-1.5 rounded bg-red-950/40 border border-red-500/40 text-red-300 font-bold text-[10px]">🗑️ Delete</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function applySkinToSelected(url) {
+            if (!selectedObject) return;
+            const textureLoader = new THREE.TextureLoader();
+            textureLoader.setCrossOrigin('anonymous');
+            const texture = textureLoader.load(url);
+            selectedObject.material.map = texture;
+            selectedObject.material.needsUpdate = true;
+            showToast('Applied skin successfully!');
+        }
+
+        function duplicateSelectedObject() {
+            if (!selectedObject) return;
+            const clone = selectedObject.clone();
+            clone.position.x += 1;
+            clone.position.z += 1;
+            clone.userData = { ...selectedObject.userData, id: crypto.randomUUID() };
+            scene.add(clone);
+            interactiveObjects.push(clone);
+            selectObject(clone);
+            showToast('Duplicated object!');
+        }
+
+        function deleteSelectedObject() {
+            if (!selectedObject) return;
+            transformControls.detach();
+            scene.remove(selectedObject);
+            interactiveObjects = interactiveObjects.filter(o => o !== selectedObject);
+            selectedObject = null;
+            togglePanel('inspectorPanel', false);
+            showToast('Object deleted.');
+        }
+
+        // --- LIBRARY & FILE UPLOAD ---
+        function handleFileUpload(event) {
+            const files = event.target.files;
+            if (!files || files.length === 0) return;
+
+            Array.from(files).forEach(file => {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const newItem = {
+                        id: 'lib-' + Date.now() + Math.random(),
+                        name: file.name.substring(0, 12),
+                        type: file.name.toLowerCase().includes('char') ? 'character' : 'texture',
+                        url: e.target.result
+                    };
+                    userLibrary.push(newItem);
+                    renderLibraryAssets();
+                    showToast(`Uploaded & sorted "${newItem.name}" into Library!`);
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function renderLibraryAssets() {
+            const grid = document.getElementById('libraryAssetsGrid');
+            const filtered = userLibrary.filter(item => activeLibTab === 'all' || item.type === activeLibTab);
+
+            grid.innerHTML = filtered.map(item => `
+                <div class="group relative bg-purple-950/40 border border-purple-500/30 rounded-lg p-1.5 flex flex-col items-center justify-between hover:border-purple-400 transition-all">
+                    <img src="${item.url}" class="w-full h-12 object-cover rounded mb-1" onerror="this.src='https://placehold.co/100x100/0f0e24/fff?text=Asset'">
+                    <span class="text-[8px] text-purple-200 truncate w-full text-center">${item.name}</span>
+                    <div class="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center space-x-1 rounded transition-opacity">
+                        <button onclick="spawnCreatedAsset('${item.url}', '${item.name}', 'paperdoll')" class="p-1 rounded bg-purple-600 text-white text-[9px]" title="Spawn">➕</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function switchLibTab(tab) {
+            activeLibTab = tab;
+            ['all', 'texture', 'character', 'object'].forEach(t => {
+                const btn = document.getElementById(`libTab-${t}`);
+                if (t === tab) btn.className = "flex-1 py-1 rounded bg-purple-600 text-white font-medium text-[10px]";
+                else btn.className = "flex-1 py-1 rounded text-purple-300 text-[10px]";
+            });
+            renderLibraryAssets();
+        }
+
+        function saveCreatedAssetToLibrary() {
+            const name = document.getElementById('newAssetName').value;
+            const newItem = {
+                id: 'lib-' + Date.now(),
+                name: name,
+                type: 'object',
+                url: 'https://placehold.co/200x200/8b5cf6/fff?text=' + encodeURIComponent(name)
+            };
+            userLibrary.push(newItem);
+            renderLibraryAssets();
+            showToast(`Saved "${name}" to Cloud Library!`);
+        }
+
+        // --- SCENE & STORY TIMELINE ---
+        function renderScenesList() {
+            const container = document.getElementById('sceneListContainer');
+            container.innerHTML = storyScenes.map((sceneItem, idx) => `
+                <div onclick="switchScene(${idx})" class="p-2 rounded-xl border ${idx === activeSceneIndex ? 'bg-cyan-950/60 border-cyan-400' : 'bg-cyan-950/20 border-cyan-500/30'} flex items-center justify-between cursor-pointer">
+                    <span class="font-medium text-[10px] text-cyan-200">${sceneItem.name}</span>
+                    <span class="text-[9px] text-cyan-400">${idx === activeSceneIndex ? '🟢 Active' : 'Select'}</span>
+                </div>
+            `).join('');
+        }
+
+        function addNewScene() {
+            const newScene = {
+                id: 'scene-' + (storyScenes.length + 1),
+                name: `Act ${storyScenes.length + 1}: Expansion Stage`,
+                objectsCount: 0
+            };
+            storyScenes.push(newScene);
+            activeSceneIndex = storyScenes.length - 1;
+            renderScenesList();
+            showToast(`Created new scene timeline!`);
+        }
+
+        function switchScene(idx) {
+            activeSceneIndex = idx;
+            renderScenesList();
+            showToast(`Switched to ${storyScenes[idx].name}`);
+        }
+
+        // --- INTERACTION MODES & UTILS ---
+        function setInteractionMode(mode) {
+            currentMode = mode;
+            ['orbit', 'move', 'rotate'].forEach(m => {
+                const btn = document.getElementById(`modeBtn-${m}`);
+                if (m === mode) btn.className = "dock-btn px-3 py-1.5 rounded-xl bg-purple-600 text-white font-bold text-xs flex items-center space-x-1";
+                else btn.className = "dock-btn px-3 py-1.5 rounded-xl bg-purple-950/60 border border-purple-500/30 text-purple-200 text-xs flex items-center space-x-1";
+            });
+
+            if (mode === 'orbit') {
+                transformControls.detach();
+                orbitControls.enabled = true;
+            } else if (mode === 'move') {
+                if (selectedObject) transformControls.attach(selectedObject);
+                transformControls.setMode('translate');
+            } else if (mode === 'rotate') {
+                if (selectedObject) transformControls.attach(selectedObject);
+                transformControls.setMode('rotate');
+            }
+        }
+
+        function clearGrid() {
+            interactiveObjects.forEach(obj => scene.remove(obj));
+            interactiveObjects = [];
+            transformControls.detach();
+            selectedObject = null;
+            togglePanel('inspectorPanel', false);
+            showToast('Theatre grid cleared.');
+        }
+
+        function togglePanel(panelId, forceState = null) {
+            const panel = document.getElementById(panelId);
+            const isHidden = forceState !== null ? !forceState : !panel.classList.contains('hidden');
+            if (isHidden) panel.classList.add('hidden');
+            else panel.classList.remove('hidden');
+        }
+
+        function minimizePanel(panelId) {
+            togglePanel(panelId, false);
+        }
+
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen();
+            } else if (document.exitFullscreen) {
+                document.exitFullscreen();
+            }
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toastNotification');
+            toast.innerText = msg;
+            toast.style.opacity = '1';
+            setTimeout(() => { toast.style.opacity = '0'; }, 2500);
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        // Initialize on load
+        window.onload = initThreeEngine;
+    </script>
+</body>
+</html>
