@@ -1,0 +1,1246 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quantum Paperdoll Theatre & Studio V4</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        cyber: {
+                            bg: '#05040f',
+                            panel: '#0f0e24',
+                            border: '#8b5cf6',
+                            pink: '#ec4899',
+                            cyan: '#06b6d4',
+                            emerald: '#10b981'
+                        }
+                    },
+                    boxShadow: {
+                        'neon-pink': '0 0 15px rgba(236, 72, 153, 0.4)',
+                        'neon-cyan': '0 0 15px rgba(6, 182, 212, 0.4)',
+                        'neon-purple': '0 0 15px rgba(139, 92, 246, 0.4)',
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Fonts & Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Orbitron:wght@500;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Three.js Engine -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/TransformControls.js"></script>
+
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #05040f; color: #f3f4f6; overflow: hidden; margin: 0; }
+        .font-orbitron { font-family: 'Orbitron', sans-serif; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: rgba(15, 14, 36, 0.8); }
+        ::-webkit-scrollbar-thumb { background: #8b5cf6; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #06b6d4; }
+        
+        /* UI Panels */
+        .glass-panel {
+            background: rgba(15, 14, 36, 0.85);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(139, 92, 246, 0.3);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+        }
+        
+        .dock-btn {
+            transition: all 0.2s ease;
+        }
+        .dock-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 -5px 15px rgba(6, 182, 212, 0.4);
+        }
+        .dock-btn.active {
+            border-bottom: 2px solid #06b6d4;
+            background: rgba(6, 182, 212, 0.2);
+        }
+        
+        /* New UI Utilities */
+        .grab-handle { cursor: grab; }
+        .grab-handle:active { cursor: grabbing; }
+        .scrub-input { cursor: ns-resize; }
+        .panel-dragged { opacity: 0.95; box-shadow: 0 10px 40px rgba(0,0,0,0.8), 0 0 20px rgba(139, 92, 246, 0.4); z-index: 50 !important; }
+
+        /* 3D Canvas wrapper */
+        #threeContainer { position: absolute; inset: 0; z-index: 0; outline: none; }
+    </style>
+</head>
+<body class="w-screen h-screen flex flex-col select-none">
+
+    <!-- TOP HEADER -->
+    <header class="absolute top-0 left-0 right-0 glass-panel border-b border-purple-500/30 px-6 py-3 flex items-center justify-between z-40">
+        <div class="flex items-center space-x-3">
+            <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-pink-500 to-cyan-500 flex items-center justify-center shadow-neon-pink">
+                <i class="fa-solid fa-layer-group text-white text-sm"></i>
+            </div>
+            <div>
+                <h1 class="font-orbitron font-bold text-sm tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-pink-400 to-cyan-400">
+                    QUANTUM STUDIO V4
+                </h1>
+                <p class="text-[9px] text-purple-300/70 font-mono" id="cloudStatusText">Connecting to Utopia Grid...</p>
+            </div>
+        </div>
+        
+        <div class="flex space-x-2">
+            <button onclick="togglePlayMode()" id="playModeBtn" class="px-4 py-1.5 rounded-lg font-orbitron text-xs bg-cyan-900/50 border border-cyan-500/50 text-cyan-300 hover:bg-cyan-800 transition-colors flex items-center space-x-2">
+                <i class="fa-solid fa-play"></i><span>Test Scene</span>
+            </button>
+            <button onclick="downloadCurrentScene()" class="px-3 py-1.5 rounded-lg bg-black/50 border border-gray-600 hover:border-gray-400 text-xs text-gray-300 transition-colors">
+                <i class="fa-solid fa-download"></i> Export JSON
+            </button>
+        </div>
+    </header>
+
+    <!-- MAIN STAGE -->
+    <main class="flex-1 relative w-full h-full overflow-hidden">
+        <div id="threeContainer" tabindex="0"></div>
+
+        <!-- LEFT SIDEBAR: Scene & Library Manager -->
+        <aside id="leftSidebar" class="absolute top-16 left-4 w-72 glass-panel rounded-2xl flex flex-col z-30 transition-opacity duration-300 max-h-[80vh]">
+            <div class="p-3 border-b border-purple-500/30 flex justify-between items-center bg-black/40 rounded-t-2xl grab-handle select-none" id="leftSidebarDrag">
+                <h2 class="font-orbitron text-xs text-cyan-300"><i class="fa-solid fa-grip-dots-vertical mr-2 text-gray-500"></i> Project & Media Library</h2>
+                <button onclick="togglePanel('leftSidebar')" class="text-gray-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="flex-1 overflow-y-auto p-3 space-y-4">
+                
+                <!-- Scenes Section -->
+                <div>
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-[10px] font-orbitron text-purple-300 uppercase">Stages / Scenes</span>
+                        <button onclick="createNewScene()" class="text-[10px] text-pink-400 hover:text-pink-300"><i class="fa-solid fa-plus"></i> Add</button>
+                    </div>
+                    <div id="scenesList" class="space-y-1">
+                        <!-- Scene items injected here -->
+                    </div>
+                </div>
+
+                <!-- Saved Assets Section -->
+                <div class="pt-2 border-t border-purple-500/20">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-[10px] font-orbitron text-purple-300 uppercase">Cloud Assets (Prefabs)</span>
+                    </div>
+                    <div id="assetsList" class="grid grid-cols-2 gap-2">
+                        <!-- Asset items injected here -->
+                    </div>
+                </div>
+
+                <!-- Media Library Section -->
+                <div class="pt-2 border-t border-purple-500/20">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-[10px] font-orbitron text-cyan-300 uppercase">Media Skins</span>
+                        <button onclick="promptAddMedia()" class="text-[10px] text-cyan-400 hover:text-cyan-200" title="Add Video URL"><i class="fa-solid fa-link"></i> Add URL</button>
+                    </div>
+                    <input type="file" id="mediaUpload" accept="image/*" onchange="handleMediaUploadToLibrary(event)" class="w-full text-[9px] text-gray-400 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:bg-cyan-900 file:text-white cursor-pointer mb-2">
+                    <div id="mediaList" class="grid grid-cols-3 gap-2">
+                        <!-- Media items injected here -->
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- RIGHT SIDEBAR: Object Inspector & Sculpting Properties -->
+        <aside id="rightSidebar" class="absolute top-16 right-4 w-80 glass-panel rounded-2xl flex flex-col z-30 transition-opacity duration-300 max-h-[80vh]" style="display: none;">
+            <div class="p-3 border-b border-purple-500/30 flex justify-between items-center bg-black/40 rounded-t-2xl grab-handle select-none" id="rightSidebarDrag">
+                <h2 class="font-orbitron text-xs text-pink-300" id="inspectorTitle"><i class="fa-solid fa-grip-dots-vertical mr-2 text-gray-500"></i> Inspector</h2>
+                <div class="flex space-x-2">
+                    <button onclick="setTransformMode('translate')" class="text-gray-400 hover:text-cyan-300 text-xs" title="Move Tool"><i class="fa-solid fa-arrows-up-down-left-right"></i></button>
+                    <button onclick="setTransformMode('rotate')" class="text-gray-400 hover:text-pink-300 text-xs" title="Rotate Tool"><i class="fa-solid fa-rotate"></i></button>
+                    <button onclick="setTransformMode('scale')" class="text-gray-400 hover:text-emerald-300 text-xs" title="Scale Tool"><i class="fa-solid fa-maximize"></i></button>
+                    <div class="w-px h-4 bg-purple-500/50 mx-1"></div>
+                    <button onclick="saveSelectedToLibrary()" class="text-cyan-400 hover:text-cyan-200 text-xs" title="Save as Cloud Asset"><i class="fa-solid fa-cloud-arrow-up"></i></button>
+                    <button onclick="deleteSelected()" class="text-red-400 hover:text-red-200 text-xs"><i class="fa-solid fa-trash"></i></button>
+                    <button onclick="togglePanel('rightSidebar')" class="text-gray-400 hover:text-white text-xs"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+            </div>
+            
+            <div id="inspectorContent" class="flex-1 overflow-y-auto p-4 space-y-4 hidden">
+                <!-- Basic Info -->
+                <div class="space-y-2">
+                    <label class="text-[10px] text-gray-400 font-orbitron">Object Name</label>
+                    <input type="text" id="propName" onchange="updateSelectedProp('name', this.value)" class="w-full bg-black/50 border border-purple-500/40 rounded px-2 py-1 text-xs text-white outline-none">
+                </div>
+
+                <!-- Transform -->
+                <div class="space-y-2 pt-2 border-t border-purple-500/20">
+                    <div class="flex justify-between items-center">
+                        <span class="text-[10px] text-cyan-300 font-orbitron">Transform <span class="text-gray-500 text-[8px]">(Drag to scrub)</span></span>
+                    </div>
+                    <div class="grid grid-cols-3 gap-2 text-[10px]">
+                        <div>X <input type="number" step="0.5" id="propPosX" onchange="updateSelectedTransform()" class="w-full bg-black/50 border border-gray-600 rounded px-1 py-0.5 text-white scrub-input"></div>
+                        <div>Y <input type="number" step="0.5" id="propPosY" onchange="updateSelectedTransform()" class="w-full bg-black/50 border border-gray-600 rounded px-1 py-0.5 text-white scrub-input"></div>
+                        <div>Z <input type="number" step="0.5" id="propPosZ" onchange="updateSelectedTransform()" class="w-full bg-black/50 border border-gray-600 rounded px-1 py-0.5 text-white scrub-input"></div>
+                    </div>
+                    <div class="grid grid-cols-3 gap-2 text-[10px]">
+                        <div>S:X <input type="number" step="0.1" id="propScaleX" onchange="updateSelectedTransform()" class="w-full bg-black/50 border border-gray-600 rounded px-1 py-0.5 text-white scrub-input"></div>
+                        <div>S:Y <input type="number" step="0.1" id="propScaleY" onchange="updateSelectedTransform()" class="w-full bg-black/50 border border-gray-600 rounded px-1 py-0.5 text-white scrub-input"></div>
+                        <div>S:Z <input type="number" step="0.1" id="propScaleZ" onchange="updateSelectedTransform()" class="w-full bg-black/50 border border-gray-600 rounded px-1 py-0.5 text-white scrub-input"></div>
+                    </div>
+                </div>
+
+                <!-- Appearance & Media -->
+                <div class="space-y-3 pt-2 border-t border-purple-500/20">
+                    <span class="text-[10px] text-pink-300 font-orbitron">Appearance & Media Skin</span>
+                    
+                    <div class="flex items-center justify-between">
+                        <label class="text-[10px] text-gray-400">Base Color</label>
+                        <input type="color" id="propColor" onchange="updateSelectedProp('color', this.value)" class="bg-transparent rounded cursor-pointer w-6 h-6 border-0">
+                    </div>
+                    
+                    <div class="flex items-center justify-between">
+                        <label class="text-[10px] text-gray-400">Neon Glow Edge</label>
+                        <input type="checkbox" id="propGlow" onchange="updateSelectedProp('glow', this.checked)" class="accent-pink-500">
+                    </div>
+
+                    <div class="space-y-1">
+                        <label class="text-[10px] text-gray-400 block">Skin URL or select from Library</label>
+                        <input type="text" id="propSkinUrl" placeholder="https://..." onchange="updateSelectedProp('skinUrl', this.value)" class="w-full bg-black/50 border border-purple-500/40 rounded px-2 py-1 text-[10px] text-white outline-none">
+                    </div>
+                </div>
+
+                <!-- Animation -->
+                <div class="space-y-2 pt-2 border-t border-purple-500/20">
+                    <span class="text-[10px] text-emerald-300 font-orbitron">Animation & Behavior</span>
+                    <select id="propAnim" onchange="updateSelectedProp('anim', this.value)" class="w-full bg-black/50 border border-purple-500/40 rounded px-2 py-1 text-[10px] text-white outline-none">
+                        <option value="none">None (Static)</option>
+                        <option value="float">Floating Hover</option>
+                        <option value="spin">Continuous Rotation</option>
+                        <option value="walk">Walking/Wobble</option>
+                        <option value="swing">Pendulum Swing</option>
+                    </select>
+                </div>
+
+                <!-- Story Triggers & Stats -->
+                <div class="space-y-2 pt-2 border-t border-purple-500/20">
+                    <span class="text-[10px] text-orange-300 font-orbitron">Interactive Nodes & Stats</span>
+                    <div class="space-y-1">
+                        <label class="text-[10px] text-gray-400">On Click Trigger Scene:</label>
+                        <select id="propTrigger" onchange="updateSelectedProp('triggerSceneId', this.value)" class="w-full bg-black/50 border border-purple-500/40 rounded px-2 py-1 text-[10px] text-white outline-none">
+                            <option value="">-- No Action --</option>
+                            <!-- Dynamic scene options injected here -->
+                        </select>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2 text-[10px] pt-1">
+                        <div>HP <input type="number" id="propStatHP" onchange="updateStats()" class="w-full bg-black/50 border border-gray-600 rounded px-1 py-0.5 text-white scrub-input"></div>
+                        <div>ATK <input type="number" id="propStatAtk" onchange="updateStats()" class="w-full bg-black/50 border border-gray-600 rounded px-1 py-0.5 text-white scrub-input"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="inspectorEmpty" class="flex-1 flex items-center justify-center text-xs text-gray-500 font-orbitron p-6 text-center">
+                Select an object in the stage to edit its properties, skins, and animations.
+            </div>
+        </aside>
+
+        <!-- BOTTOM DOCK: Asset Creator & Main Tools -->
+        <div class="absolute bottom-4 left-1/2 transform -translate-x-1/2 glass-panel rounded-full px-6 py-2 flex items-center space-x-6 z-40">
+            
+            <button onclick="togglePanel('leftSidebar')" class="dock-btn flex flex-col items-center space-y-1 text-gray-300 hover:text-cyan-300">
+                <i class="fa-solid fa-folder-open text-lg"></i>
+                <span class="text-[9px] font-orbitron">Library</span>
+            </button>
+            
+            <div class="h-8 w-px bg-purple-500/30"></div> <!-- Divider -->
+
+            <!-- Asset Spawners -->
+            <button onclick="spawnPrimitive('cube')" class="dock-btn flex flex-col items-center space-y-1 text-gray-300 hover:text-pink-400" title="Spawn Cube">
+                <i class="fa-solid fa-cube text-lg"></i>
+                <span class="text-[9px] font-orbitron">Cube</span>
+            </button>
+            <button onclick="spawnPrimitive('sphere')" class="dock-btn flex flex-col items-center space-y-1 text-gray-300 hover:text-blue-400" title="Spawn Sphere">
+                <i class="fa-solid fa-globe text-lg"></i>
+                <span class="text-[9px] font-orbitron">Sphere</span>
+            </button>
+            <button onclick="spawnPrimitive('cylinder')" class="dock-btn flex flex-col items-center space-y-1 text-gray-300 hover:text-emerald-400" title="Spawn Cylinder">
+                <i class="fa-solid fa-database text-lg"></i>
+                <span class="text-[9px] font-orbitron">Cylinder</span>
+            </button>
+            <button onclick="spawnPrimitive('paperdoll')" class="dock-btn flex flex-col items-center space-y-1 text-gray-300 hover:text-purple-400" title="Spawn Paperdoll 2D">
+                <i class="fa-solid fa-user-ninja text-lg"></i>
+                <span class="text-[9px] font-orbitron">Paperdoll</span>
+            </button>
+            <button onclick="spawnPrimitive('grid')" class="dock-btn flex flex-col items-center space-y-1 text-gray-300 hover:text-yellow-400" title="Spawn Grid Architecture">
+                <i class="fa-solid fa-border-all text-lg"></i>
+                <span class="text-[9px] font-orbitron">Floor</span>
+            </button>
+
+            <div class="h-8 w-px bg-purple-500/30"></div> <!-- Divider -->
+
+            <button onclick="saveCurrentScene()" class="dock-btn flex flex-col items-center space-y-1 text-gray-300 hover:text-cyan-300">
+                <i class="fa-solid fa-floppy-disk text-lg"></i>
+                <span class="text-[9px] font-orbitron">Save Scene</span>
+            </button>
+        </div>
+
+    </main>
+
+    <!-- Custom Toast Notification -->
+    <div id="toast" class="fixed top-16 left-1/2 transform -translate-x-1/2 z-50 glass-panel border border-cyan-500 px-4 py-2 rounded-xl shadow-neon-cyan flex items-center space-x-3 transition-all duration-300 opacity-0 -translate-y-10 pointer-events-none">
+        <i class="fa-solid fa-info-circle text-cyan-400"></i>
+        <span id="toastMsg" class="text-xs font-orbitron text-white">Notification</span>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, collection, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Global state for Cloud DB
+        window.cloudDb = null;
+        window.userId = null;
+        window.appId = typeof __app_id !== 'undefined' ? __app_id : 'default-quantum-studio';
+
+        async function initCloud() {
+            try {
+                if (typeof __firebase_config === 'undefined') {
+                    console.warn("No Firebase config found. Running in local-only mode.");
+                    document.getElementById('cloudStatusText').innerText = "Offline Mode (No Cloud Save)";
+                    return;
+                }
+
+                const firebaseConfig = JSON.parse(__firebase_config);
+                const app = initializeApp(firebaseConfig);
+                const auth = getAuth(app);
+                window.cloudDb = getFirestore(app);
+
+                // Auth Logic (Rule 3)
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+
+                onAuthStateChanged(auth, (user) => {
+                    if (user) {
+                        window.userId = user.uid;
+                        document.getElementById('cloudStatusText').innerText = `Utopia Grid Active (User: ${user.uid.substring(0,5)}...)`;
+                        loadLibraryData(); // Fetch scenes and prefabs
+                    }
+                });
+            } catch (e) {
+                console.error("Cloud init failed:", e);
+                document.getElementById('cloudStatusText').innerText = "Cloud Connection Error";
+            }
+        }
+        
+        // Export cloud logic to window so traditional JS can call it
+        window.saveDataToCloud = async function(collectionName, docId, data) {
+            if (!window.cloudDb || !window.userId) return false;
+            try {
+                const docRef = doc(window.cloudDb, 'artifacts', window.appId, 'users', window.userId, collectionName, docId);
+                await setDoc(docRef, data);
+                return true;
+            } catch (e) {
+                console.error("Save error:", e);
+                return false;
+            }
+        };
+
+        window.fetchCollectionData = async function(collectionName) {
+            if (!window.cloudDb || !window.userId) return [];
+            try {
+                const colRef = collection(window.cloudDb, 'artifacts', window.appId, 'users', window.userId, collectionName);
+                const snap = await getDocs(colRef);
+                return snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            } catch (e) {
+                console.error("Fetch error:", e);
+                return [];
+            }
+        };
+
+        window.deleteDataFromCloud = async function(collectionName, docId) {
+             if (!window.cloudDb || !window.userId) return false;
+             try {
+                 const docRef = doc(window.cloudDb, 'artifacts', window.appId, 'users', window.userId, collectionName, docId);
+                 await deleteDoc(docRef);
+                 return true;
+             } catch(e) {
+                 return false;
+             }
+        }
+
+        initCloud();
+    </script>
+
+    <script>
+        // --- GLOBAL VARIABLES ---
+        let scene, camera, renderer;
+        let gridHelper, roomBoxWireframe;
+        let objectsInStage = [];
+        let raycaster = new THREE.Raycaster();
+        let mouse = new THREE.Vector2();
+        
+        let orbitControls, transformControls;
+        
+        // Editor State
+        let selectedObject = null;
+        let isPlayMode = false;
+        
+        // Scene Data Structure
+        let currentSceneId = 'scene_default';
+        let currentSceneData = {
+            id: 'scene_default',
+            name: 'Main Stage',
+            objects: []
+        };
+        
+        // Library Cache
+        let cloudScenes = [];
+        let cloudPrefabs = [];
+        let cloudMedia = [];
+
+        // --- CORE THREE.JS INITIALIZATION ---
+        function initThreeEngine() {
+            const container = document.getElementById('threeContainer');
+            
+            // Scene Setup
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x05040f);
+            scene.fog = new THREE.FogExp2(0x05040f, 0.035);
+
+            // Camera Setup
+            camera = new THREE.PerspectiveCamera(60, container.clientWidth / container.clientHeight, 0.1, 1000);
+            camera.position.set(0, 5, 12);
+            camera.lookAt(0, 2, 0);
+
+            // Renderer Setup
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.shadowMap.enabled = true;
+            container.appendChild(renderer.domElement);
+
+            // Lighting
+            scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+            const pointLight1 = new THREE.PointLight(0xec4899, 2.0, 40);
+            pointLight1.position.set(-6, 8, 5);
+            scene.add(pointLight1);
+            const pointLight2 = new THREE.PointLight(0x06b6d4, 2.0, 40);
+            pointLight2.position.set(6, 8, 5);
+            scene.add(pointLight2);
+
+            // Base Aesthetics (Grid & Bounds)
+            gridHelper = new THREE.GridHelper(40, 40, 0x8b5cf6, 0x131127);
+            gridHelper.position.y = -0.5;
+            scene.add(gridHelper);
+
+            const roomGeo = new THREE.BoxGeometry(24, 14, 24);
+            const roomMat = new THREE.MeshBasicMaterial({ color: 0x8b5cf6, wireframe: true, transparent: true, opacity: 0.1 });
+            roomBoxWireframe = new THREE.Mesh(roomGeo, roomMat);
+            roomBoxWireframe.position.y = 6.5;
+            scene.add(roomBoxWireframe);
+
+            // Camera Controls (Angles)
+            orbitControls = new THREE.OrbitControls(camera, renderer.domElement);
+            orbitControls.enableDamping = true;
+            orbitControls.dampingFactor = 0.05;
+            orbitControls.maxPolarAngle = Math.PI / 2 + 0.1;
+
+            // Object Controls (Drag & Drop)
+            transformControls = new THREE.TransformControls(camera, renderer.domElement);
+            transformControls.addEventListener('dragging-changed', function (event) {
+                orbitControls.enabled = !event.value;
+            });
+            transformControls.addEventListener('change', function () {
+                if (selectedObject && transformControls.object === selectedObject) {
+                    selectedObject.userData.pos = { x: selectedObject.position.x, y: selectedObject.position.y, z: selectedObject.position.z };
+                    selectedObject.userData.scale = { x: selectedObject.scale.x, y: selectedObject.scale.y, z: selectedObject.scale.z };
+                    
+                    selectedObject.userData.basePosX = selectedObject.position.x;
+                    selectedObject.userData.basePosY = selectedObject.position.y;
+                    selectedObject.userData.basePosZ = selectedObject.position.z;
+                    
+                    populateInspector(selectedObject);
+                }
+            });
+            scene.add(transformControls);
+
+            // Events
+            window.addEventListener('resize', onWindowResize);
+            container.addEventListener('mousedown', onStageClick); 
+
+            // Setup UI 
+            setupDraggablePanels();
+            setupScrubbableInputs();
+
+            // Start Loop
+            animate();
+            
+            // Spawn default empty stage if no cloud data loaded yet
+            setTimeout(() => {
+                if(objectsInStage.length === 0) {
+                    spawnPrimitive('cube', {x: -3, y: 1, z: -2}, '#ec4899', 'Server Terminal');
+                    spawnPrimitive('paperdoll', {x: 2, y: 1.5, z: 1}, '#06b6d4', 'Hacker Avatar');
+                }
+            }, 1000);
+        }
+
+        // --- ANIMATION LOOP ---
+        function animate() {
+            requestAnimationFrame(animate);
+            const time = Date.now() * 0.001;
+            
+            if (orbitControls) orbitControls.update();
+
+            objectsInStage.forEach(obj => {
+                const ud = obj.userData;
+                if (!ud) return;
+
+                // Handle Paperdoll Billboarding (Always face camera)
+                if (ud.isPaperdoll) {
+                    // Only copy Y rotation or full quaternion based on style
+                    obj.quaternion.copy(camera.quaternion);
+                }
+
+                // Handle Custom Animations
+                if (isPlayMode || true) { // Run animations even in edit mode for preview
+                    const baseY = ud.basePosY !== undefined ? ud.basePosY : obj.position.y;
+                    const baseX = ud.basePosX !== undefined ? ud.basePosX : obj.position.x;
+                    const baseZ = ud.basePosZ !== undefined ? ud.basePosZ : obj.position.z;
+                    const offset = ud.animOffset || 0; // random offset to prevent sync
+
+                    switch(ud.anim) {
+                        case 'float':
+                            obj.position.y = baseY + Math.sin(time * 2 + offset) * 0.5;
+                            break;
+                        case 'spin':
+                            obj.rotation.y += 0.02;
+                            break;
+                        case 'walk':
+                            // Wobble and slight hop
+                            obj.rotation.z = Math.sin(time * 5 + offset) * 0.1;
+                            obj.position.y = baseY + Math.abs(Math.sin(time * 5 + offset)) * 0.3;
+                            break;
+                        case 'swing':
+                            obj.rotation.z = Math.sin(time * 2 + offset) * 0.3;
+                            break;
+                        default:
+                            // Reset to base if animation removed
+                            if(ud.basePosY !== undefined) obj.position.y = ud.basePosY;
+                            break;
+                    }
+                }
+            });
+
+            renderer.render(scene, camera);
+        }
+
+        function onWindowResize() {
+            const container = document.getElementById('threeContainer');
+            camera.aspect = container.clientWidth / container.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(container.clientWidth, container.clientHeight);
+        }
+
+        // --- INTERACTION & SELECTION ---
+        function onStageClick(event) {
+            // Ignore if clicking on Transform Gizmo or UI Panels
+            if (transformControls && transformControls.dragging) return;
+            if (event.target.closest('.glass-panel')) return;
+
+            const container = document.getElementById('threeContainer');
+            const rect = container.getBoundingClientRect();
+            mouse.x = ((event.clientX - rect.left) / container.clientWidth) * 2 - 1;
+            mouse.y = -((event.clientY - rect.top) / container.clientHeight) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(objectsInStage, true);
+
+            if (intersects.length > 0) {
+                // Find root object (in case of grouped geometry)
+                let hit = intersects[0].object;
+                while(hit.parent && hit.parent.type !== "Scene") {
+                    if (hit.userData && hit.userData.id) break;
+                    hit = hit.parent;
+                }
+                
+                if (isPlayMode) {
+                    handlePlayModeInteraction(hit);
+                } else {
+                    selectObject(hit);
+                }
+            } else if (!isPlayMode) {
+                deselectObject();
+            }
+        }
+
+        function handlePlayModeInteraction(obj) {
+            if (obj.userData.triggerSceneId) {
+                showToast("Node Triggered", `Switching to scene...`);
+                loadSceneToCanvas(obj.userData.triggerSceneId);
+            } else {
+                showToast("Interaction", `${obj.userData.name} says: 'Access Denied.'`);
+            }
+        }
+
+        function selectObject(obj) {
+            // Remove highlight from previous
+            if (selectedObject && selectedObject.getObjectByName('selectionBox')) {
+                selectedObject.remove(selectedObject.getObjectByName('selectionBox'));
+            }
+
+            selectedObject = obj;
+            
+            // Show right sidebar if hidden
+            const rightSidebar = document.getElementById('rightSidebar');
+            if (rightSidebar.style.display === 'none' || rightSidebar.classList.contains('hidden')) {
+                togglePanel('rightSidebar');
+            }
+            
+            document.getElementById('inspectorEmpty').classList.add('hidden');
+            document.getElementById('inspectorContent').classList.remove('hidden');
+
+            if (transformControls && !isPlayMode) {
+                transformControls.attach(obj);
+            }
+
+            // Add highlight box
+            const box = new THREE.BoxHelper(obj, 0xffffff);
+            box.name = 'selectionBox';
+            obj.add(box);
+
+            populateInspector(obj);
+        }
+
+        function deselectObject() {
+            if (selectedObject && selectedObject.getObjectByName('selectionBox')) {
+                selectedObject.remove(selectedObject.getObjectByName('selectionBox'));
+            }
+            selectedObject = null;
+            if (transformControls) transformControls.detach();
+            document.getElementById('inspectorEmpty').classList.remove('hidden');
+            document.getElementById('inspectorContent').classList.add('hidden');
+        }
+        
+        function setTransformMode(mode) {
+            if (transformControls) {
+                transformControls.setMode(mode);
+                showToast('Tool Switched', `Transform mode: ${mode}`);
+            }
+        }
+
+        // --- UI & UX ENHANCEMENTS ---
+        function setupDraggablePanels() {
+            const makeDraggable = (panelId, handleId) => {
+                const panel = document.getElementById(panelId);
+                const handle = document.getElementById(handleId);
+                let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+                
+                handle.onmousedown = (e) => dragMouseDown(e);
+                handle.ontouchstart = (e) => { 
+                    if (e.cancelable) e.preventDefault(); 
+                    dragMouseDown(e.touches[0]); 
+                };
+
+                function dragMouseDown(e) {
+                    if (e && e.cancelable) e.preventDefault();
+                    pos3 = e.clientX;
+                    pos4 = e.clientY;
+                    document.onmouseup = closeDragElement;
+                    document.onmousemove = elementDrag;
+                    document.ontouchend = closeDragElement;
+                    document.ontouchmove = (ev) => {
+                        if (ev.touches && ev.touches[0]) elementDrag(ev.touches[0]);
+                    };
+                    panel.classList.add('panel-dragged');
+                }
+
+                function elementDrag(e) {
+                    if (e && e.cancelable) e.preventDefault();
+                    pos1 = pos3 - e.clientX;
+                    pos2 = pos4 - e.clientY;
+                    pos3 = e.clientX;
+                    pos4 = e.clientY;
+                    const newTop = Math.max(0, Math.min(window.innerHeight - 50, panel.offsetTop - pos2));
+                    const newLeft = Math.max(0, Math.min(window.innerWidth - 50, panel.offsetLeft - pos1));
+                    panel.style.top = newTop + "px";
+                    panel.style.left = newLeft + "px";
+                    panel.style.bottom = "auto";
+                    panel.style.right = "auto";
+                }
+
+                function closeDragElement() {
+                    document.onmouseup = null;
+                    document.onmousemove = null;
+                    document.ontouchend = null;
+                    document.ontouchmove = null;
+                    panel.classList.remove('panel-dragged');
+                }
+            };
+            makeDraggable('leftSidebar', 'leftSidebarDrag');
+            makeDraggable('rightSidebar', 'rightSidebarDrag');
+        }
+
+        function setupScrubbableInputs() {
+            const inputs = document.querySelectorAll('.scrub-input');
+            inputs.forEach(input => {
+                let startY, startVal;
+                
+                const onDown = (e) => {
+                    if (e.cancelable) e.preventDefault();
+                    startY = e.clientY || (e.touches && e.touches[0] ? e.touches[0].clientY : 0);
+                    startVal = parseFloat(input.value) || 0;
+                    document.addEventListener('mousemove', onMove);
+                    document.addEventListener('mouseup', onUp);
+                    document.addEventListener('touchmove', onMove, {passive: false});
+                    document.addEventListener('touchend', onUp);
+                };
+                
+                const onMove = (e) => {
+                    if (e.cancelable) e.preventDefault();
+                    const currentY = e.clientY || (e.touches && e.touches[0] ? e.touches[0].clientY : startY);
+                    const deltaY = startY - currentY;
+                    const step = parseFloat(input.getAttribute('step')) || 1;
+                    const newVal = startVal + (deltaY * step * 0.5); 
+                    input.value = newVal.toFixed(2);
+                    input.dispatchEvent(new Event('change'));
+                };
+                
+                const onUp = () => {
+                    document.removeEventListener('mousemove', onMove);
+                    document.removeEventListener('mouseup', onUp);
+                    document.removeEventListener('touchmove', onMove);
+                    document.removeEventListener('touchend', onUp);
+                };
+                input.addEventListener('mousedown', onDown);
+                input.addEventListener('touchstart', onDown, {passive: false});
+            });
+        }
+
+        // --- ASSET CREATION & SCULPTING ---
+        function spawnPrimitive(type, pos = null, color = null, name = null) {
+            const position = pos || { x: (Math.random()-0.5)*4, y: 1.5, z: (Math.random()-0.5)*4 };
+            const hexColor = color || (type === 'paperdoll' ? '#06b6d4' : '#ec4899');
+            const objName = name || `${type.charAt(0).toUpperCase() + type.slice(1)} Asset`;
+
+            const modelData = {
+                id: 'obj_' + Date.now() + Math.floor(Math.random()*1000),
+                type: type,
+                name: objName,
+                color: hexColor,
+                pos: position,
+                rot: { x:0, y:0, z:0 },
+                scale: { x:1, y:1, z:1 },
+                anim: 'none',
+                glow: true,
+                isPaperdoll: type === 'paperdoll',
+                skinUrl: '',
+                stats: { hp: 100, atk: 10 },
+                triggerSceneId: ''
+            };
+
+            const mesh = buildMeshFromData(modelData);
+            scene.add(mesh);
+            objectsInStage.push(mesh);
+            
+            selectObject(mesh);
+            showToast('Asset Created', `${objName} spawned on stage.`);
+            return mesh;
+        }
+
+        function buildMeshFromData(data) {
+            let geometry, material;
+            
+            if (data.type === 'cube') geometry = new THREE.BoxGeometry(1, 1, 1);
+            else if (data.type === 'sphere') geometry = new THREE.SphereGeometry(0.5, 32, 32);
+            else if (data.type === 'cylinder') geometry = new THREE.CylinderGeometry(0.5, 0.5, 1, 16);
+            else if (data.type === 'grid') geometry = new THREE.PlaneGeometry(4, 4);
+            else geometry = new THREE.PlaneGeometry(1, 1.5); // paperdoll
+
+            material = new THREE.MeshStandardMaterial({
+                color: data.color,
+                roughness: 0.3,
+                metalness: 0.6,
+                side: THREE.DoubleSide,
+                transparent: true
+            });
+
+            const mesh = new THREE.Mesh(geometry, material);
+            
+            // Set Transforms
+            mesh.position.set(data.pos.x, data.pos.y, data.pos.z);
+            mesh.rotation.set(data.rot.x, data.rot.y, data.rot.z);
+            mesh.scale.set(data.scale.x, data.scale.y, data.scale.z);
+            
+            // Grid specifics
+            if (data.type === 'grid') mesh.rotation.x = -Math.PI / 2;
+
+            // Apply Skin if exists
+            if (data.skinUrl) {
+                applyTextureToMesh(mesh, data.skinUrl);
+            }
+
+            // Save Data
+            mesh.userData = { 
+                ...data,
+                basePosX: data.pos.x,
+                basePosY: data.pos.y,
+                basePosZ: data.pos.z,
+                animOffset: Math.random() * Math.PI
+            };
+
+            // Glow Effect
+            applyGlowEffect(mesh, data.glow, data.color);
+
+            return mesh;
+        }
+
+        function applyGlowEffect(mesh, enable, color) {
+            const existingGlow = mesh.getObjectByName('neonGlow');
+            if (existingGlow) mesh.remove(existingGlow);
+
+            if (enable) {
+                const edges = new THREE.EdgesGeometry(mesh.geometry);
+                const lineMat = new THREE.LineBasicMaterial({ color: color, transparent: true, opacity: 0.8, linewidth: 2 });
+                const line = new THREE.LineSegments(edges, lineMat);
+                line.name = 'neonGlow';
+                // Scale slightly up to prevent z-fighting
+                line.scale.set(1.02, 1.02, 1.02);
+                mesh.add(line);
+            }
+        }
+
+        // --- INSPECTOR LOGIC ---
+        function populateInspector(obj) {
+            const data = obj.userData;
+            document.getElementById('propName').value = data.name || '';
+            document.getElementById('propPosX').value = obj.position.x.toFixed(2);
+            document.getElementById('propPosY').value = obj.position.y.toFixed(2);
+            document.getElementById('propPosZ').value = obj.position.z.toFixed(2);
+            document.getElementById('propScaleX').value = obj.scale.x.toFixed(2);
+            document.getElementById('propScaleY').value = obj.scale.y.toFixed(2);
+            document.getElementById('propScaleZ').value = obj.scale.z.toFixed(2);
+            
+            // Convert numerical hex or string to standard hex for color picker
+            let hexStr = '#ffffff';
+            if (obj.material && obj.material.color) {
+                hexStr = '#' + obj.material.color.getHexString();
+            }
+            document.getElementById('propColor').value = hexStr;
+            
+            document.getElementById('propGlow').checked = data.glow;
+            document.getElementById('propAnim').value = data.anim || 'none';
+            document.getElementById('propSkinUrl').value = data.skinUrl || '';
+            
+            // Stats
+            document.getElementById('propStatHP').value = data.stats?.hp || 100;
+            document.getElementById('propStatAtk').value = data.stats?.atk || 10;
+
+            // Triggers (populate select with available scenes)
+            const triggerSelect = document.getElementById('propTrigger');
+            triggerSelect.innerHTML = '<option value="">-- No Action --</option>';
+            cloudScenes.forEach(sc => {
+                triggerSelect.innerHTML += `<option value="${sc.id}">${sc.name}</option>`;
+            });
+            triggerSelect.value = data.triggerSceneId || '';
+        }
+
+        function updateSelectedProp(key, value) {
+            if (!selectedObject) return;
+            const data = selectedObject.userData;
+            
+            if (key === 'name') data.name = value;
+            if (key === 'color') {
+                data.color = value;
+                selectedObject.material.color.set(value);
+                applyGlowEffect(selectedObject, data.glow, value);
+            }
+            if (key === 'glow') {
+                data.glow = value;
+                applyGlowEffect(selectedObject, value, data.color);
+            }
+            if (key === 'anim') data.anim = value;
+            if (key === 'skinUrl') {
+                data.skinUrl = value;
+                applyTextureToMesh(selectedObject, value);
+            }
+            if (key === 'triggerSceneId') data.triggerSceneId = value;
+        }
+
+        function updateSelectedTransform() {
+            if (!selectedObject) return;
+            const x = parseFloat(document.getElementById('propPosX').value) || 0;
+            const y = parseFloat(document.getElementById('propPosY').value) || 0;
+            const z = parseFloat(document.getElementById('propPosZ').value) || 0;
+            const sx = parseFloat(document.getElementById('propScaleX').value) || 1;
+            const sy = parseFloat(document.getElementById('propScaleY').value) || 1;
+            const sz = parseFloat(document.getElementById('propScaleZ').value) || 1;
+
+            selectedObject.position.set(x, y, z);
+            selectedObject.scale.set(sx, sy, sz);
+
+            selectedObject.userData.pos = {x, y, z};
+            selectedObject.userData.scale = {x: sx, y: sy, z: sz};
+            selectedObject.userData.basePosX = x;
+            selectedObject.userData.basePosY = y;
+            selectedObject.userData.basePosZ = z;
+        }
+
+        function updateStats() {
+            if (!selectedObject) return;
+            if (!selectedObject.userData.stats) selectedObject.userData.stats = {};
+            selectedObject.userData.stats.hp = parseInt(document.getElementById('propStatHP').value) || 100;
+            selectedObject.userData.stats.atk = parseInt(document.getElementById('propStatAtk').value) || 10;
+        }
+
+        function deleteSelected() {
+            if (!selectedObject) return;
+            if (transformControls) transformControls.detach();
+            scene.remove(selectedObject);
+            objectsInStage = objectsInStage.filter(o => o !== selectedObject);
+            deselectObject();
+            showToast('Deleted', 'Object removed from stage.');
+        }
+
+        // --- MEDIA UPLOAD & LIBRARY SYSTEM ---
+        async function handleMediaUploadToLibrary(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            if (file.size > 800 * 1024) { 
+                showToast("File Too Large", "Max size for Base64 cloud library is 800KB. Try adding a URL link for larger images/videos.");
+                event.target.value = '';
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                const base64Data = e.target.result;
+                const mediaDoc = {
+                    id: 'media_' + Date.now(),
+                    name: file.name,
+                    type: file.type,
+                    url: base64Data, // Store Base64 strings safely in db
+                    timestamp: Date.now()
+                };
+                
+                showToast("Uploading...", "Saving media to Utopia Grid");
+                const success = await window.saveDataToCloud('media', mediaDoc.id, mediaDoc);
+                if(success) {
+                    showToast("Uploaded!", "Image added to library.");
+                    loadLibraryData();
+                } else {
+                    showToast("Error", "Cloud save failed.");
+                }
+            };
+            reader.readAsDataURL(file);
+        }
+        
+        async function promptAddMedia() {
+            const url = prompt("Enter Image or Video URL (e.g. https://...):");
+            if(!url) return;
+            
+            const mediaDoc = {
+                id: 'media_' + Date.now(),
+                name: "Linked Web Media",
+                type: url.match(/\.(mp4|webm|ogg)$/i) ? 'video/mp4' : 'image/jpeg',
+                url: url,
+                timestamp: Date.now()
+            };
+            
+            const success = await window.saveDataToCloud('media', mediaDoc.id, mediaDoc);
+            if(success) {
+                showToast("Added!", "Media link saved to library.");
+                loadLibraryData();
+            }
+        }
+
+        function applyMediaToSelected(url) {
+            if (!selectedObject) {
+                showToast("Error", "Select an object first to apply skin.");
+                return;
+            }
+            updateSelectedProp('skinUrl', url);
+            document.getElementById('propSkinUrl').value = url;
+            showToast("Skin Applied", "Texture mapped successfully.");
+        }
+
+        function applyTextureToMesh(mesh, url) {
+            if (!url) {
+                mesh.material.map = null;
+                mesh.material.needsUpdate = true;
+                return;
+            }
+            
+            // Check if it's a video file type 
+            if (url.match(/\.(mp4|webm|ogg)$/i) || url.includes('video')) {
+                const video = document.createElement('video');
+                video.src = url;
+                video.crossOrigin = 'anonymous';
+                video.loop = true;
+                video.muted = true;
+                video.playsInline = true;
+                video.play().catch(e => console.warn("Video playback prevented:", e));
+
+                const texture = new THREE.VideoTexture(video);
+                texture.minFilter = THREE.LinearFilter;
+                mesh.material.map = texture;
+                mesh.material.color.setHex(0xffffff); // Clear color tint
+                mesh.material.needsUpdate = true;
+            } else {
+                const loader = new THREE.TextureLoader();
+                loader.setCrossOrigin('anonymous');
+                loader.load(url, (texture) => {
+                    mesh.material.map = texture;
+                    mesh.material.color.setHex(0xffffff); 
+                    mesh.material.needsUpdate = true;
+                }, undefined, (err) => {
+                    console.error("Texture load error. URL may be invalid or blocked by CORS constraints.");
+                    showToast("Texture Error", "Failed to load skin. Check URL/CORS.");
+                });
+            }
+        }
+
+        // --- CLOUD LIBRARY & SCENE SYSTEM ---
+        async function saveCurrentScene() {
+            if (!window.cloudDb) {
+                showToast('Save Failed', 'Cloud not connected.');
+                return;
+            }
+            
+            showToast('Saving...', 'Syncing to Utopia Grid...');
+            const sceneName = prompt("Enter Scene Name:", currentSceneData.name) || "Untitled Scene";
+            
+            // Serialize Objects
+            const serializedObjects = objectsInStage.map(obj => obj.userData);
+            
+            const sceneDoc = {
+                id: currentSceneId === 'scene_default' ? 'scene_' + Date.now() : currentSceneId,
+                name: sceneName,
+                objects: serializedObjects,
+                timestamp: Date.now()
+            };
+
+            const success = await window.saveDataToCloud('scenes', sceneDoc.id, sceneDoc);
+            if (success) {
+                currentSceneId = sceneDoc.id;
+                currentSceneData = sceneDoc;
+                showToast('Saved!', `Scene '${sceneName}' synced to cloud.`);
+                loadLibraryData();
+            } else {
+                showToast('Error', 'Failed to save scene to cloud.');
+            }
+        }
+
+        async function saveSelectedToLibrary() {
+            if (!selectedObject || !window.cloudDb) return;
+            const data = selectedObject.userData;
+            const prefabName = prompt("Name this Prefab Asset:", data.name || "My Prefab");
+            if (!prefabName) return;
+            
+            const prefabData = { ...data, name: prefabName, id: 'prefab_' + Date.now() };
+            
+            showToast('Saving Asset...', 'Uploading to cloud library...');
+            const success = await window.saveDataToCloud('prefabs', prefabData.id, prefabData);
+            if (success) {
+                showToast('Asset Saved', `'${prefabName}' is now in your library.`);
+                loadLibraryData();
+            }
+        }
+
+        async function loadLibraryData() {
+            if (!window.cloudDb) return;
+            
+            cloudScenes = await window.fetchCollectionData('scenes');
+            cloudPrefabs = await window.fetchCollectionData('prefabs');
+            cloudMedia = await window.fetchCollectionData('media');
+            
+            renderLibraryUI();
+        }
+
+        function renderLibraryUI() {
+            // Render Scenes
+            const scenesList = document.getElementById('scenesList');
+            scenesList.innerHTML = '';
+            cloudScenes.forEach(sc => {
+                scenesList.innerHTML += `
+                    <div class="flex justify-between items-center bg-black/40 p-2 rounded border border-purple-500/20">
+                        <span class="text-[10px] text-cyan-300 font-orbitron truncate w-32 cursor-pointer hover:text-cyan-100" onclick="loadSceneToCanvas('${sc.id}')">${sc.name}</span>
+                        <button onclick="deleteCloudItem('scenes', '${sc.id}')" class="text-red-400 hover:text-red-300 text-[10px]"><i class="fa-solid fa-trash"></i></button>
+                    </div>
+                `;
+            });
+            
+            // Render Prefabs
+            const assetsList = document.getElementById('assetsList');
+            assetsList.innerHTML = '';
+            cloudPrefabs.forEach(pf => {
+                const icon = pf.type === 'cube' ? 'fa-cube' : pf.type === 'sphere' ? 'fa-globe' : pf.type === 'paperdoll' ? 'fa-user-ninja' : 'fa-box';
+                assetsList.innerHTML += `
+                    <div class="relative flex flex-col items-center bg-black/40 p-2 rounded border border-pink-500/20 cursor-pointer hover:bg-black/60 transition-colors group">
+                        <div onclick='spawnPrefabFromLibrary(${JSON.stringify(pf)})' class="w-full text-center">
+                            <i class="fa-solid ${icon} text-pink-400 mb-1"></i>
+                            <span class="text-[9px] text-gray-300 font-orbitron line-clamp-1 w-full">${pf.name}</span>
+                        </div>
+                        <button onclick="deleteCloudItem('prefabs', '${pf.id}')" class="absolute top-1 right-1 opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-300 text-[8px]"><i class="fa-solid fa-trash"></i></button>
+                    </div>
+                `;
+            });
+
+            // Render Media Library
+            const mediaList = document.getElementById('mediaList');
+            if (mediaList) {
+                mediaList.innerHTML = '';
+                cloudMedia.forEach(m => {
+                    const isVid = m.type && m.type.includes('video');
+                    const icon = isVid ? 'fa-film' : 'fa-image';
+                    
+                    mediaList.innerHTML += `
+                        <div class="relative flex flex-col items-center justify-center bg-black/40 p-1 rounded border border-cyan-500/20 cursor-pointer hover:bg-black/60 group">
+                            <div onclick="applyMediaToSelected(this.getAttribute('data-url'))" data-url="${m.url}" class="w-full h-10 flex flex-col items-center justify-center overflow-hidden">
+                                ${!isVid && m.url.startsWith('data:image') ? `<img src="${m.url}" class="h-8 object-cover opacity-70 group-hover:opacity-100">` : `<i class="fa-solid ${icon} text-cyan-400"></i>`}
+                            </div>
+                            <span class="text-[8px] text-gray-400 font-orbitron truncate w-full text-center mt-1" title="${m.name}">${m.name}</span>
+                            <button onclick="deleteCloudItem('media', '${m.id}')" class="absolute top-0 right-0 p-1 opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-300 text-[8px]"><i class="fa-solid fa-trash"></i></button>
+                        </div>
+                    `;
+                });
+            }
+            
+            // Update Inspector triggers drop down if active
+            if (selectedObject) populateInspector(selectedObject);
+        }
+
+        async function deleteCloudItem(collection, id) {
+            if(confirm('Are you sure you want to delete this from the cloud?')) {
+                await window.deleteDataFromCloud(collection, id);
+                loadLibraryData();
+                showToast('Deleted', 'Item removed from cloud.');
+            }
+        }
+
+        function loadSceneToCanvas(sceneId) {
+            const sc = cloudScenes.find(s => s.id === sceneId);
+            if (!sc) return;
+            
+            // Clear current stage
+            deselectObject();
+            objectsInStage.forEach(obj => scene.remove(obj));
+            objectsInStage = [];
+            
+            currentSceneId = sc.id;
+            currentSceneData = sc;
+            
+            // Rebuild
+            if (sc.objects) {
+                sc.objects.forEach(objData => {
+                    // Refresh IDs to prevent collisions if duplicated
+                    const mesh = buildMeshFromData(objData);
+                    scene.add(mesh);
+                    objectsInStage.push(mesh);
+                });
+            }
+            showToast('Scene Loaded', `'${sc.name}' initiated.`);
+        }
+
+        function spawnPrefabFromLibrary(prefabData) {
+            // slightly offset so it doesn't stack perfectly if spawned multiple times
+            const offsetData = { 
+                ...prefabData, 
+                id: 'obj_' + Date.now(),
+                pos: { x: prefabData.pos.x + (Math.random()-0.5), y: prefabData.pos.y, z: prefabData.pos.z + (Math.random()-0.5) }
+            };
+            const mesh = buildMeshFromData(offsetData);
+            scene.add(mesh);
+            objectsInStage.push(mesh);
+            selectObject(mesh);
+            showToast('Prefab Spawned', `${prefabData.name} added to stage.`);
+        }
+
+        function createNewScene() {
+            deselectObject();
+            objectsInStage.forEach(obj => scene.remove(obj));
+            objectsInStage = [];
+            currentSceneId = 'scene_' + Date.now();
+            currentSceneData = { id: currentSceneId, name: 'New Blank Stage', objects: [] };
+            showToast('New Stage', 'Canvas cleared for new construction.');
+        }
+
+        // --- UTILS ---
+        function togglePanel(id) {
+            const el = document.getElementById(id);
+            if (el.style.display === 'none' || el.classList.contains('hidden')) {
+                el.style.display = 'flex';
+                el.classList.remove('hidden');
+                
+                // Assign absolute coordinates centrally so they pop up smartly if they lost them
+                if (!el.style.top) el.style.top = '64px';
+                if (id === 'leftSidebar' && !el.style.left) el.style.left = '16px';
+                if (id === 'rightSidebar' && !el.style.right) el.style.right = '16px';
+            } else {
+                el.style.display = 'none';
+            }
+        }
+
+        function togglePlayMode() {
+            isPlayMode = !isPlayMode;
+            const btn = document.getElementById('playModeBtn');
+            if (isPlayMode) {
+                btn.innerHTML = `<i class="fa-solid fa-stop"></i><span>Stop Mode</span>`;
+                btn.className = "px-4 py-1.5 rounded-lg font-orbitron text-xs bg-pink-900/50 border border-pink-500/50 text-pink-300 hover:bg-pink-800 transition-colors flex items-center space-x-2";
+                deselectObject();
+                if (transformControls) transformControls.detach();
+                showToast('Play Mode Active', 'Click objects to trigger scene nodes.');
+            } else {
+                btn.innerHTML = `<i class="fa-solid fa-play"></i><span>Test Scene</span>`;
+                btn.className = "px-4 py-1.5 rounded-lg font-orbitron text-xs bg-cyan-900/50 border border-cyan-500/50 text-cyan-300 hover:bg-cyan-800 transition-colors flex items-center space-x-2";
+                showToast('Edit Mode Active', 'Editing tools restored.');
+            }
+        }
+
+        function downloadCurrentScene() {
+            const serializedObjects = objectsInStage.map(obj => obj.userData);
+            const exportData = {
+                name: currentSceneData.name,
+                objects: serializedObjects,
+                exportedAt: new Date().toISOString()
+            };
+            
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportData, null, 2));
+            const downloadAnchorNode = document.createElement('a');
+            downloadAnchorNode.setAttribute("href", dataStr);
+            downloadAnchorNode.setAttribute("download", "quantum_sculpture_" + Date.now() + ".json");
+            document.body.appendChild(downloadAnchorNode);
+            downloadAnchorNode.click();
+            downloadAnchorNode.remove();
+            showToast('JSON Exported', 'Scene downloaded to local disk.');
+        }
+
+        function showToast(title, message) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toastMsg').innerHTML = `<strong>${title}</strong>: ${message}`;
+            toast.classList.remove('opacity-0', '-translate-y-10');
+            
+            setTimeout(() => {
+                toast.classList.add('opacity-0', '-translate-y-10');
+            }, 3000);
+        }
+
+        // Init App
+        window.onload = () => {
+            initThreeEngine();
+            
+            // Layout panels gracefully depending on Mobile vs Desktop
+            if(window.innerWidth <= 768) {
+                document.getElementById('leftSidebar').style.display = 'none';
+            } else {
+                document.getElementById('leftSidebar').style.display = 'flex';
+            }
+        };
+
+    </script>
+</body>
+</html>
