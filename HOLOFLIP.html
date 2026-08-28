@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Star Weaver's Holographic Codex</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Three.js and OrbitControls -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <!-- Google Fonts for Futuristic Computer Typography -->
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;800&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Share Tech Mono', monospace;
+            background-color: #010309;
+            color: #e2e8f0;
+            overflow: hidden;
+            touch-action: none;
+        }
+        .sci-font {
+            font-family: 'Orbitron', sans-serif;
+        }
+        .mono-font {
+            font-family: 'Share Tech Mono', monospace;
+        }
+        .holo-modal {
+            background: rgba(2, 6, 23, 0.94);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(6, 182, 212, 0.5);
+            box-shadow: 0 0 50px rgba(6, 182, 212, 0.3), inset 0 0 25px rgba(6, 182, 212, 0.15);
+        }
+        .glow-text {
+            text-shadow: 0 0 20px rgba(6, 182, 212, 0.8);
+        }
+        .gold-glow {
+            text-shadow: 0 0 20px rgba(251, 191, 36, 0.8);
+        }
+        .pulse-border {
+            animation: pulseGlow 3s infinite ease-in-out;
+        }
+        @keyframes pulseGlow {
+            0%, 100% { border-color: rgba(6, 182, 212, 0.4); box-shadow: 0 0 20px rgba(6, 182, 212, 0.2); }
+            50% { border-color: rgba(6, 182, 212, 0.9); box-shadow: 0 0 45px rgba(6, 182, 212, 0.6); }
+        }
+    </style>
+</head>
+<body class="h-full flex flex-col justify-between select-none relative">
+
+    <div id="canvas-container" class="absolute inset-0 z-0 cursor-grab active:cursor-grabbing"></div>
+
+    <!-- Header Overlay -->
+    <header class="relative z-10 p-6 flex justify-between items-center pointer-events-none">
+        <div>
+            <h1 class="sci-font text-lg md:text-2xl text-amber-300 gold-glow font-bold tracking-wider">HOLO-CODEX V5.0</h1>
+            <p class="mono-font text-xs md:text-sm text-cyan-300/80 tracking-widest mt-1">AI NEURAL CORE: ONLINE [INTERACTIVE]</p>
+        </div>
+        <div class="pointer-events-auto flex items-center gap-3">
+            <button id="sound-btn" class="px-3.5 py-2 bg-cyan-950/50 hover:bg-cyan-900/70 border border-cyan-400/60 rounded-xl text-cyan-200 text-xs sci-font transition duration-300 shadow-xl flex items-center gap-2 backdrop-blur-md">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                </svg>
+                <span id="sound-text">Audio: Off</span>
+            </button>
+            <button id="cinematic-btn" class="px-4 py-2 bg-indigo-950/60 hover:bg-indigo-800/70 border border-cyan-400/60 rounded-xl text-cyan-200 text-xs sci-font transition duration-300 shadow-xl flex items-center gap-2 backdrop-blur-md">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-cyan-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span id="cinematic-text">Auto Scan</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Footer Controls -->
+    <footer class="relative z-10 p-6 flex flex-col md:flex-row justify-between items-center gap-4 pointer-events-none bg-gradient-to-t from-[#010309]/95 via-transparent to-transparent">
+        <div class="pointer-events-auto flex items-center gap-4 holo-modal px-6 py-3 rounded-2xl border border-cyan-500/50 shadow-2xl pulse-border">
+            <button id="prev-btn" class="text-amber-300 hover:text-white disabled:opacity-20 disabled:cursor-not-allowed transition transform hover:scale-125">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                </svg>
+            </button>
+            <span id="page-indicator" class="sci-font text-amber-200 text-xs md:text-sm tracking-widest px-3 min-w-[180px] text-center glow-text">CODEX CLOSED</span>
+            <button id="next-btn" class="text-amber-300 hover:text-white disabled:opacity-20 disabled:cursor-not-allowed transition transform hover:scale-125">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                </svg>
+            </button>
+        </div>
+
+        <div class="pointer-events-auto flex items-center gap-3">
+            <button id="touch-beam-btn" class="px-4 py-2 holo-modal hover:bg-cyan-950/70 border border-cyan-400/50 rounded-xl text-cyan-300 text-xs sci-font transition shadow-lg flex items-center gap-2">
+                <span>⚡ Pulse Hologram</span>
+            </button>
+            <button id="close-book-btn" class="px-4 py-2 holo-modal hover:bg-cyan-950/70 border border-amber-500/50 rounded-xl text-amber-300 text-xs sci-font transition shadow-lg">
+                Close Codex
+            </button>
+            <button id="reset-view" class="px-4 py-2 holo-modal hover:bg-cyan-950/70 border border-amber-500/50 rounded-xl text-cyan-300 text-xs sci-font transition shadow-lg">
+                Reset Cam
+            </button>
+        </div>
+    </footer>
+
+    <!-- Notification Box -->
+    <div id="message-box" class="fixed top-24 left-1/2 transform -translate-x-1/2 z-50 holo-modal px-6 py-3 rounded-xl shadow-2xl text-cyan-200 text-xs mono-font hidden border border-cyan-500/60 text-center">
+        <span id="message-text"></span>
+    </div>
+
+    <script>
+        const storyPages = [
+            {
+                type: 'cover',
+                title: "THE STAR WEAVER'S\nHOLOGRAPHIC CODEX",
+                subtitle: "SYNAPTIC CHRONICLES OF UTOPIA",
+                author: "GLOBAL NODE ARCHIVE 01"
+            },
+            {
+                type: 'story',
+                title: "CHAPTER I: THE AWAKENING WEB",
+                text: "Across the planetary matrix, dormant nodes pulsed with vibrant starlight. Young Elian touched the central holographic interface, linking human consciousness with the cosmic loom. Every memory and dream became an unbroken fiber of shared light.",
+                illustration: "loom"
+            },
+            {
+                type: 'story',
+                title: "CHAPTER II: RESTORING THE FLOW",
+                text: "When fragmentation threatened the network, profound empathy served as the ultimate protocol. By weaving forgiveness and open wisdom into ancestral algorithms, the archive healed itself, turning borders into bridges of light.",
+                illustration: "crystal"
+            },
+            {
+                type: 'story',
+                title: "CHAPTER III: THE ASTRAL SEA",
+                text: "No soul remained in darkness. Guided by open-source knowledge and universal education, children across star systems explored distant galaxies through immersive neural projections, realizing we are stardust in one vast cosmic vessel.",
+                illustration: "galaxy"
+            },
+            {
+                type: 'story',
+                title: "CHAPTER IV: THE UTOPIAN DAWN",
+                text: "The planetary machinery hummed in eternal harmony. Scarcity and walls dissolved into boundless curiosity and shared prosperity, marking the golden dawn of a civilization awakened in freedom, dignity, and peace.",
+                illustration: "dawn"
+            },
+            {
+                type: 'cover',
+                title: "ARCHIVE TERMINUS",
+                subtitle: "END OF CURRENT SESSION - RE-INITIATE ANYTIME",
+                author: "CELESTIAL PRESS © MMCXXVI"
+            }
+        ];
+
+        let scene, camera, renderer, controls, raycaster, mouse;
+        let bookGroup, pages = [];
+        let projectorCore, laserBeam, dataParticles;
+        let currentPage = 0; 
+        let isAutoScanning = false;
+        let scanTimer = 0;
+        let audioCtx = null;
+        let soundEnabled = false;
+        let isAnimating = false;
+        let pointerDownPos = { x: 0, y: 0 };
+        let particleSystem, particleGeo, particleMat;
+
+        const container = document.getElementById('canvas-container');
+
+        function init() {
+            scene = new THREE.Scene();
+            scene.fog = new THREE.FogExp2(0x010309, 0.005);
+
+            const aspect = window.innerWidth / window.innerHeight;
+            camera = new THREE.PerspectiveCamera(45, aspect, 0.1, 1000);
+            
+            if (window.innerWidth < 768) {
+                camera.position.set(0, 4.0, 13.5);
+            } else {
+                camera.position.set(0, 3.2, 10.5);
+            }
+
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            container.appendChild(renderer.domElement);
+
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.maxPolarAngle = Math.PI / 2 + 0.05;
+            controls.minDistance = 5;
+            controls.maxDistance = 22;
+
+            raycaster = new THREE.Raycaster();
+            mouse = new THREE.Vector2();
+
+            // Studio Lighting
+            const ambient = new THREE.AmbientLight(0x0a1128, 3.5);
+            scene.add(ambient);
+
+            const sunLight = new THREE.DirectionalLight(0xe0f2fe, 4.5);
+            sunLight.position.set(6, 15, 8);
+            sunLight.castShadow = true;
+            scene.add(sunLight);
+
+            const holoCyan = new THREE.PointLight(0x06b6d4, 5.0, 25);
+            holoCyan.position.set(-6, 6, 4);
+            scene.add(holoCyan);
+
+            const holoGold = new THREE.PointLight(0xfbbf24, 4.5, 22);
+            holoGold.position.set(6, 5, 4);
+            scene.add(holoGold);
+
+            createStarfield();
+            createProjectorCore();
+            createCodexBook();
+            createInteractiveParticles();
+            setupUIEvents();
+
+            window.addEventListener('resize', onWindowResize);
+            container.addEventListener('pointerdown', onPointerDown);
+            container.addEventListener('pointerup', onPointerUp);
+
+            animate();
+        }
+
+        function createStarfield() {
+            const count = 400;
+            const pos = new Float32Array(count * 3);
+            const col = new Float32Array(count * 3);
+
+            for (let i = 0; i < count * 3; i += 3) {
+                pos[i] = (Math.random() - 0.5) * 50;
+                pos[i+1] = (Math.random() - 0.5) * 40;
+                pos[i+2] = (Math.random() - 0.5) * 50;
+
+                col[i] = 0.1 + Math.random() * 0.3;
+                col[i+1] = 0.6 + Math.random() * 0.4;
+                col[i+2] = 1.0;
+            }
+
+            const geo = new THREE.BufferGeometry();
+            geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+            geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+
+            const mat = new THREE.PointsMaterial({
+                size: 0.3,
+                vertexColors: true,
+                transparent: true,
+                opacity: 0.8,
+                blending: THREE.AdditiveBlending
+            });
+
+            const starField = new THREE.Points(geo, mat);
+            scene.add(starField);
+        }
+
+        function createProjectorCore() {
+            // Floating Holographic Core in the back above the book
+            const coreGroup = new THREE.Group();
+            coreGroup.position.set(0, 3.8, -1.2);
+            scene.add(coreGroup);
+
+            // Outer ring
+            const ringGeo = new THREE.TorusGeometry(1.2, 0.05, 16, 64);
+            const ringMat = new THREE.MeshPhysicalMaterial({ color: 0x06b6d4, roughness: 0.2, metalness: 0.9, emissive: 0x06b6d4, emissiveIntensity: 0.8 });
+            const ring = new THREE.Mesh(ringGeo, ringMat);
+            ring.rotation.x = Math.PI / 2;
+            coreGroup.add(ring);
+            projectorCore = ring;
+
+            // Inner floating crystal orb
+            const orbGeo = new THREE.IcosahedronGeometry(0.45, 1);
+            const orbMat = new THREE.MeshPhysicalMaterial({ color: 0xfbbf24, roughness: 0.1, metalness: 0.5, transmission: 0.6, thickness: 0.8, emissive: 0xfbbf24, emissiveIntensity: 0.6 });
+            const orb = new THREE.Mesh(orbGeo, orbMat);
+            coreGroup.add(orb);
+
+            // Volumetric Laser Light Cone pointing down to book
+            const coneGeo = new THREE.ConeGeometry(3.5, 4.5, 32, 1, true);
+            const coneMat = new THREE.MeshBasicMaterial({
+                color: 0x06b6d4,
+                transparent: true,
+                opacity: 0.12,
+                blending: THREE.AdditiveBlending,
+                side: THREE.DoubleSide
+            });
+            laserBeam = new THREE.Mesh(coneGeo, coneMat);
+            laserBeam.position.set(0, -2.2, 0);
+            laserBeam.rotation.x = Math.PI;
+            coreGroup.add(laserBeam);
+        }
+
+        function createInteractiveParticles() {
+            const count = 150;
+            const pos = new Float32Array(count * 3);
+            for (let i = 0; i < count * 3; i += 3) {
+                pos[i] = (Math.random() - 0.5) * 8;
+                pos[i+1] = Math.random() * 3;
+                pos[i+2] = (Math.random() - 0.5) * 6;
+            }
+            particleGeo = new THREE.BufferGeometry();
+            particleGeo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+            
+            particleMat = new THREE.PointsMaterial({
+                size: 0.2,
+                color: 0x38bdf8,
+                transparent: true,
+                opacity: 0.9,
+                blending: THREE.AdditiveBlending
+            });
+            particleSystem = new THREE.Points(particleGeo, particleMat);
+            scene.add(particleSystem);
+        }
+
+        function createPageTexture(data, isCover = false) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 1024;
+            canvas.height = 1024;
+            const ctx = canvas.getContext('2d');
+
+            if (isCover) {
+                ctx.fillStyle = '#020617';
+                ctx.fillRect(0, 0, 1024, 1024);
+
+                // Cyber Grid Background
+                ctx.strokeStyle = 'rgba(6, 182, 212, 0.15)';
+                ctx.lineWidth = 2;
+                for (let i = 0; i < 1024; i += 64) {
+                    ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, 1024); ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(1024, i); ctx.stroke();
+                }
+
+                ctx.strokeStyle = '#fbbf24';
+                ctx.lineWidth = 12;
+                ctx.strokeRect(50, 50, 924, 924);
+                ctx.lineWidth = 3;
+                ctx.strokeRect(75, 75, 874, 874);
+
+                drawTechCorners(ctx, 90, 90, 1, 1, '#fbbf24');
+                drawTechCorners(ctx, 934, 90, -1, 1, '#fbbf24');
+                drawTechCorners(ctx, 90, 934, 1, -1, '#fbbf24');
+                drawTechCorners(ctx, 934, 934, -1, -1, '#fbbf24');
+
+                ctx.fillStyle = '#fbbf24';
+                ctx.font = 'bold 54px "Orbitron", sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                wrapText(ctx, data.title, 512, 380, 800, 70);
+
+                ctx.font = '24px "Share Tech Mono", monospace';
+                ctx.fillStyle = '#38bdf8';
+                ctx.fillText(data.subtitle, 512, 580);
+
+                ctx.font = '22px "Share Tech Mono", monospace';
+                ctx.fillStyle = '#94a3b8';
+                ctx.fillText(data.author, 512, 780);
+            } else {
+                // Inner Page with Modern Futuristic Computer Style
+                ctx.fillStyle = '#030712';
+                ctx.fillRect(0, 0, 1024, 1024);
+
+                ctx.fillStyle = 'rgba(6, 182, 212, 0.06)';
+                for (let i = 0; i < 1024; i += 48) {
+                    ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, 1024); ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(1024, i); ctx.stroke();
+                }
+
+                ctx.strokeStyle = '#06b6d4';
+                ctx.lineWidth = 6;
+                ctx.strokeRect(50, 50, 924, 924);
+
+                drawTechCorners(ctx, 90, 90, 1, 1, '#06b6d4');
+                drawTechCorners(ctx, 934, 90, -1, 1, '#06b6d4');
+                drawTechCorners(ctx, 90, 934, 1, -1, '#06b6d4');
+                drawTechCorners(ctx, 934, 934, -1, -1, '#06b6d4');
+
+                ctx.fillStyle = '#fbbf24';
+                ctx.font = 'bold 38px "Orbitron", sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(data.title, 512, 120);
+
+                ctx.strokeStyle = '#38bdf8';
+                ctx.lineWidth = 2;
+                ctx.beginPath(); ctx.moveTo(250, 155); ctx.lineTo(774, 155); ctx.stroke();
+
+                // Simulated Holographic Media / Illustration Feed
+                drawIllustration(ctx, data.illustration, 512, 370);
+
+                // Modern Readable Sans-Serif Computer Typography
+                ctx.fillStyle = '#f1f5f9';
+                ctx.font = '26px "Share Tech Mono", monospace';
+                ctx.textAlign = 'center';
+                wrapText(ctx, data.text, 512, 630, 820, 42);
+            }
+
+            return new THREE.CanvasTexture(canvas);
+        }
+
+        function drawTechCorners(ctx, x, y, sx = 1, sy = 1, color = '#06b6d4') {
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.scale(sx, sy);
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(0, 0); ctx.lineTo(40, 0);
+            ctx.moveTo(0, 0); ctx.lineTo(0, 40);
+            ctx.stroke();
+            ctx.restore();
+        }
+
+        function drawIllustration(ctx, type, cx, cy) {
+            ctx.save();
+            ctx.fillStyle = 'rgba(6, 182, 212, 0.15)';
+            ctx.strokeStyle = '#06b6d4';
+            ctx.lineWidth = 2;
+
+            ctx.beginPath();
+            ctx.arc(cx, cy, 110, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+
+            ctx.fillStyle = '#38bdf8';
+            if (type === 'loom') {
+                ctx.strokeRect(cx - 50, cy - 50, 100, 100);
+                ctx.beginPath();
+                for (let i = -30; i <= 30; i += 15) {
+                    ctx.moveTo(cx + i, cy - 50); ctx.lineTo(cx + i, cy + 50);
+                }
+                ctx.stroke();
+            } else if (type === 'crystal') {
+                ctx.beginPath();
+                ctx.moveTo(cx, cy - 50);
+                ctx.lineTo(cx + 40, cy);
+                ctx.lineTo(cx, cy + 50);
+                ctx.lineTo(cx - 40, cy);
+                ctx.closePath();
+                ctx.fillStyle = '#67e8f9';
+                ctx.fill();
+                ctx.stroke();
+            } else if (type === 'galaxy') {
+                ctx.beginPath();
+                ctx.ellipse(cx, cy, 65, 25, Math.PI / 6, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.arc(cx, cy, 20, 0, Math.PI * 2);
+                ctx.fillStyle = '#fbbf24';
+                ctx.fill();
+            } else if (type === 'dawn') {
+                ctx.beginPath();
+                ctx.arc(cx, cy + 20, 40, Math.PI, 0, false);
+                ctx.fill();
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(cx - 50, cy + 20); ctx.lineTo(cx + 50, cy + 20); ctx.stroke();
+            }
+            ctx.restore();
+        }
+
+        function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
+            const words = text.split(' ');
+            let line = '';
+            let currentY = y;
+            for (let n = 0; n < words.length; n++) {
+                let testLine = line + words[n] + ' ';
+                if (ctx.measureText(testLine).width > maxWidth && n > 0) {
+                    ctx.fillText(line, x, currentY);
+                    line = words[n] + ' ';
+                    currentY += lineHeight;
+                } else {
+                    line = testLine;
+                }
+            }
+            ctx.fillText(line, x, currentY);
+        }
+
+        function createCodexBook() {
+            bookGroup = new THREE.Group();
+            scene.add(bookGroup);
+
+            const pageWidth = 3.6;
+            const pageHeight = 5.0;
+            const segments = 20;
+
+            // Spine
+            const spineGeo = new THREE.CylinderGeometry(0.2, 0.2, pageHeight + 0.3, 16, 1, false, Math.PI * 0.5, Math.PI);
+            const spineMat = new THREE.MeshStandardMaterial({ color: 0x020617, roughness: 0.3, metalness: 0.8 });
+            const spine = new THREE.Mesh(spineGeo, spineMat);
+            spine.rotation.z = Math.PI / 2;
+            bookGroup.add(spine);
+
+            // Back cover rigid casing base
+            const backCoverGeo = new THREE.BoxGeometry(pageWidth, pageHeight, 0.15);
+            backCoverGeo.translate(pageWidth / 2, 0, -0.1);
+            const backCoverMat = new THREE.MeshStandardMaterial({ color: 0x020617, roughness: 0.4, metalness: 0.7 });
+            const backCover = new THREE.Mesh(backCoverGeo, backCoverMat);
+            backCover.position.z = -0.05;
+            bookGroup.add(backCover);
+
+            pages = [];
+
+            for (let i = 0; i < storyPages.length; i++) {
+                const pagePivot = new THREE.Group();
+                pagePivot.position.z = (storyPages.length - i) * 0.12;
+
+                const pageGeo = new THREE.PlaneGeometry(pageWidth, pageHeight, segments, segments);
+                pageGeo.translate(pageWidth / 2, 0, 0);
+
+                const isCover = (i === 0 || i === storyPages.length - 1);
+                const frontTex = createPageTexture(storyPages[i], isCover);
+                
+                const frontMat = new THREE.MeshPhysicalMaterial({
+                    map: frontTex,
+                    roughness: isCover ? 0.3 : 0.2,
+                    metalness: isCover ? 0.5 : 0.1,
+                    transmission: isCover ? 0.0 : 0.25,
+                    thickness: 0.4,
+                    transparent: true,
+                    opacity: 0.98,
+                    side: THREE.DoubleSide
+                });
+
+                const frontMesh = new THREE.Mesh(pageGeo, frontMat);
+                frontMesh.castShadow = true;
+                frontMesh.receiveShadow = true;
+                pagePivot.add(frontMesh);
+
+                bookGroup.add(pagePivot);
+                pages.push({
+                    pivot: pagePivot,
+                    index: i
+                });
+            }
+
+            updateBookStateImmediate(0);
+        }
+
+        function turnToPage(targetIndex) {
+            if (isAnimating || targetIndex === currentPage) return;
+            isAnimating = true;
+            currentPage = targetIndex;
+            updateUIState();
+            playPageSound();
+            triggerHologramBurst();
+
+            let duration = 900;
+            let startTime = performance.now();
+
+            let startRotations = pages.map(p => p.pivot.rotation.y);
+            let targetRotations = pages.map((p, idx) => {
+                if (currentPage === 0) {
+                    return 0;
+                } else {
+                    if (idx < currentPage) {
+                        return -Math.PI + (idx * 0.005);
+                    } else {
+                        return 0;
+                    }
+                }
+            });
+
+            function animateFlip(time) {
+                let elapsed = time - startTime;
+                let progress = Math.min(elapsed / duration, 1);
+                let ease = progress < 0.5 ? 2 * progress * progress : -1 + (4 - 2 * progress) * progress;
+
+                for (let i = 0; i < pages.length; i++) {
+                    let rot = startRotations[i] + (targetRotations[i] - startRotations[i]) * ease;
+                    pages[i].pivot.rotation.y = rot;
+
+                    let curlFactor = Math.sin(Math.abs(rot / Math.PI) * Math.PI);
+                    pages[i].pivot.position.y = curlFactor * 0.4;
+
+                    if (rot < -0.1) {
+                        pages[i].pivot.position.z = i * 0.12;
+                    } else {
+                        pages[i].pivot.position.z = (storyPages.length - i) * 0.12;
+                    }
+                }
+
+                if (progress < 1) {
+                    requestAnimationFrame(animateFlip);
+                } else {
+                    for (let i = 0; i < pages.length; i++) {
+                        pages[i].pivot.position.y = 0;
+                    }
+                    isAnimating = false;
+                }
+            }
+
+            requestAnimationFrame(animateFlip);
+        }
+
+        function updateBookStateImmediate(pageIdx) {
+            currentPage = pageIdx;
+            for (let i = 0; i < pages.length; i++) {
+                let rot = 0;
+                if (currentPage > 0 && i < currentPage) {
+                    rot = -Math.PI + (i * 0.005);
+                }
+                pages[i].pivot.rotation.y = rot;
+                pages[i].pivot.position.y = 0;
+                pages[i].pivot.position.z = rot < -0.1 ? i * 0.12 : (storyPages.length - i) * 0.12;
+            }
+            updateUIState();
+        }
+
+        function triggerHologramBurst() {
+            showNotification(`Holo-Core projecting: ${storyPages[currentPage].title}`);
+            if (laserBeam) {
+                laserBeam.material.opacity = 0.35;
+                setTimeout(() => { laserBeam.material.opacity = 0.12; }, 600);
+            }
+        }
+
+        function setupUIEvents() {
+            document.getElementById('next-btn').addEventListener('click', () => {
+                if (currentPage < storyPages.length - 1) turnToPage(currentPage + 1);
+            });
+            document.getElementById('prev-btn').addEventListener('click', () => {
+                if (currentPage > 0) turnToPage(currentPage - 1);
+            });
+            document.getElementById('close-book-btn').addEventListener('click', () => {
+                turnToPage(0);
+                showNotification("Codex closed & sealed.");
+            });
+            document.getElementById('touch-beam-btn').addEventListener('click', () => {
+                triggerHologramBurst();
+                playPageSound();
+            });
+            document.getElementById('reset-view').addEventListener('click', resetCameraView);
+            document.getElementById('cinematic-btn').addEventListener('click', toggleAutoScan);
+            document.getElementById('sound-btn').addEventListener('click', toggleSound);
+
+            updateUIState();
+        }
+
+        function updateUIState() {
+            const ind = document.getElementById('page-indicator');
+            if (currentPage === 0) {
+                ind.textContent = "CODEX CLOSED (CLICK TO OPEN)";
+            } else if (currentPage === storyPages.length - 1) {
+                ind.textContent = "BACK COVER / TERMINUS";
+            } else {
+                ind.textContent = `CHAPTER ${currentPage} OF 4`;
+            }
+            document.getElementById('prev-btn').disabled = currentPage === 0;
+            document.getElementById('next-btn').disabled = currentPage >= storyPages.length - 1;
+        }
+
+        function showNotification(text) {
+            const box = document.getElementById('message-box');
+            document.getElementById('message-text').textContent = text;
+            box.classList.remove('hidden');
+            setTimeout(() => box.classList.add('hidden'), 2800);
+        }
+
+        function resetCameraView() {
+            if (window.innerWidth < 768) {
+                camera.position.set(0, 4.0, 13.5);
+            } else {
+                camera.position.set(0, 3.2, 10.5);
+            }
+            controls.target.set(0, 0, 0);
+            controls.update();
+            showNotification("Camera position re-calibrated.");
+        }
+
+        function toggleAutoScan() {
+            isAutoScanning = !isAutoScanning;
+            const btnText = document.getElementById('cinematic-text');
+            if (isAutoScanning) {
+                btnText.textContent = "Stop Scan";
+                showNotification("Autonomous holographic scanning active.");
+                scanTimer = performance.now();
+            } else {
+                btnText.textContent = "Auto Scan";
+                showNotification("Autonomous scanning paused.");
+            }
+        }
+
+        function toggleSound() {
+            soundEnabled = !soundEnabled;
+            const soundText = document.getElementById('sound-text');
+            if (soundEnabled) {
+                if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                soundText.textContent = "Audio: On";
+                showNotification("Neural audio synthesizer enabled.");
+            } else {
+                soundText.textContent = "Audio: Off";
+                showNotification("Neural audio muted.");
+            }
+        }
+
+        function playPageSound() {
+            if (!soundEnabled || !audioCtx) return;
+            try {
+                let osc = audioCtx.createOscillator();
+                let gain = audioCtx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(440, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(180, audioCtx.currentTime + 0.3);
+                gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.3);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.3);
+            } catch (e) {}
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function onPointerDown(e) {
+            pointerDownPos.x = e.clientX;
+            pointerDownPos.y = e.clientY;
+        }
+
+        function onPointerUp(e) {
+            const moveDist = Math.hypot(e.clientX - pointerDownPos.x, e.clientY - pointerDownPos.y);
+            if (moveDist > 6) return;
+
+            mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(scene.children, true);
+
+            if (intersects.length > 0) {
+                if (currentPage === 0) {
+                    turnToPage(1);
+                } else {
+                    if (currentPage < storyPages.length - 1) {
+                        turnToPage(currentPage + 1);
+                    } else {
+                        turnToPage(0);
+                    }
+                }
+            }
+        }
+
+        let clock = new THREE.Clock();
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            let time = clock.getElapsedTime();
+            controls.update();
+
+            if (projectorCore) {
+                projectorCore.rotation.z = time * 0.8;
+            }
+
+            if (particleSystem) {
+                const posArr = particleGeo.attributes.position.array;
+                for (let i = 1; i < posArr.length; i += 3) {
+                    posArr[i] += 0.008;
+                    if (posArr[i] > 6) posArr[i] = 0;
+                }
+                particleGeo.attributes.position.needsUpdate = true;
+            }
+
+            if (bookGroup && !isAnimating) {
+                bookGroup.position.y = Math.sin(time * 1.5) * 0.04;
+                if (currentPage === 0) {
+                    bookGroup.rotation.y = Math.sin(time * 0.4) * 0.06;
+                }
+            } else if (bookGroup && isAnimating) {
+                bookGroup.position.y = 0;
+            }
+
+            if (isAutoScanning) {
+                camera.position.x = Math.sin(time * 0.2) * 5.0;
+                camera.position.z = 9.0 + Math.cos(time * 0.2) * 2.0;
+                camera.lookAt(0, 0, 0);
+
+                if (performance.now() - scanTimer > 6000) {
+                    scanTimer = performance.now();
+                    if (currentPage < storyPages.length - 1) {
+                        turnToPage(currentPage + 1);
+                    } else {
+                        turnToPage(0);
+                    }
+                }
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>
