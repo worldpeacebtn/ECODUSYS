@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Star Weaver's Apprentice - Cinematic 3D Fairytale</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Three.js and OrbitControls -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'IM Fell English', serif;
+            background-color: #05050a;
+            color: #f3f4f6;
+            overflow: hidden;
+            touch-action: none;
+        }
+        .title-font {
+            font-family: 'Cinzel', serif;
+        }
+        .modal {
+            background: rgba(15, 15, 25, 0.92);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(212, 175, 55, 0.3);
+        }
+    </style>
+</head>
+<body class="h-full flex flex-col justify-between select-none relative">
+
+    <div id="canvas-container" class="absolute inset-0 z-0"></div>
+
+    <!-- Header Overlay -->
+    <header class="relative z-10 p-4 md:p-6 flex justify-between items-center pointer-events-none">
+        <div>
+            <h1 class="title-font text-xl md:text-3xl text-amber-300 drop-shadow-[0_2px_10px_rgba(251,191,36,0.5)]">The Star Weaver's Apprentice</h1>
+            <p class="text-xs md:text-sm text-amber-100/70 italic">An Immersive Fairytale Experience in 3D</p>
+        </div>
+        <div class="pointer-events-auto flex gap-3">
+            <button id="cinematic-btn" class="px-3 py-1.5 md:px-4 md:py-2 bg-amber-600/30 hover:bg-amber-600/50 border border-amber-400/50 rounded-full text-amber-200 text-xs md:text-sm title-font transition duration-300 shadow-lg flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span id="cinematic-text">Cinematic Mode</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Footer Controls -->
+    <footer class="relative z-10 p-4 md:p-6 flex flex-col md:flex-row justify-between items-center gap-3 pointer-events-none bg-gradient-to-t from-black/80 via-black/40 to-transparent">
+        <div class="pointer-events-auto flex items-center gap-4 bg-black/60 px-5 py-2.5 rounded-full border border-amber-500/20 backdrop-blur-md shadow-2xl">
+            <button id="prev-btn" class="text-amber-300 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition transform hover:scale-110 p-1">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                </svg>
+            </button>
+            <span id="page-indicator" class="title-font text-amber-200 text-xs md:text-sm tracking-widest px-2 min-w-[100px] text-center">Cover / 5</span>
+            <button id="next-btn" class="text-amber-300 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition transform hover:scale-110 p-1">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                </svg>
+            </button>
+        </div>
+
+        <div class="pointer-events-auto flex items-center gap-3">
+            <button id="zoom-in" class="p-2.5 bg-black/60 hover:bg-amber-900/30 border border-amber-500/20 rounded-full text-amber-300 transition shadow-lg" title="Zoom In">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 md:h-5 md:w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
+                </svg>
+            </button>
+            <button id="zoom-out" class="p-2.5 bg-black/60 hover:bg-amber-900/30 border border-amber-500/20 rounded-full text-amber-300 transition shadow-lg" title="Zoom Out">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 md:h-5 md:w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM13 10H7" />
+                </svg>
+            </button>
+            <button id="reset-view" class="px-3.5 py-2 bg-black/60 hover:bg-amber-900/30 border border-amber-500/20 rounded-full text-amber-300 text-xs title-font transition shadow-lg">
+                Reset View
+            </button>
+        </div>
+    </footer>
+
+    <!-- Notification Message Box -->
+    <div id="message-box" class="fixed top-20 left-1/2 transform -translate-x-1/2 z-50 modal px-6 py-3 rounded-xl shadow-2xl text-amber-200 text-sm hidden border border-amber-500/40 text-center">
+        <span id="message-text"></span>
+    </div>
+
+    <script>
+        const storyPages = [
+            {
+                type: 'cover',
+                title: "The Star Weaver's\nApprentice",
+                subtitle: "A Tale of Celestial Threads",
+                author: "By Master Alistair"
+            },
+            {
+                type: 'story',
+                title: "Chapter I: The Loom of Night",
+                text: "High atop the spire of Whispering Crag, young Elian tended the Great Cosmic Loom. Every evening as dusk fell, he gathered threads of starlight—gold from dying comets and silver from the crescent moon—to weave the blanket of the night sky, keeping the waking world safe in slumber.",
+                illustration: "loom"
+            },
+            {
+                type: 'story',
+                title: "Chapter II: The Stolen Gleam",
+                text: "One frosty equinox, a mischievous shadow-sprite slipped into the observatory. Before Elian could blink, the thief snared the Heart-Star, the brightest diamond of the northern quadrant. Without its light, the tapestry frayed, and the constellations began to slip into dark oblivion.",
+                illustration: "sprite"
+            },
+            {
+                type: 'story',
+                title: "Chapter III: Across the Astral Sea",
+                text: "Determined to restore balance, Elian fashioned a sail from moon-silk and stepped into the Astral Sea. Guided only by his glowing spindle, he navigated nebulas of violet dust and sang ancient lullabies to tame the roaring solar winds that barred his path.",
+                illustration: "sea"
+            },
+            {
+                type: 'story',
+                title: "Chapter IV: The Eternal Dawn",
+                text: "Deep within the Nebula of Whispers, Elian confronted the shadow. Instead of fighting with sword or spell, he wove a thread of pure forgiveness and wonder around the thief. Transformed by light, the shadow returned the Heart-Star, restoring forever the golden harmony of the cosmos.",
+                illustration: "dawn"
+            },
+            {
+                type: 'back-cover',
+                title: "The End",
+                subtitle: "May your nights be filled with wonder",
+                author: "Celestial Press © MMCXXVI"
+            }
+        ];
+
+        let scene, camera, renderer, controls;
+        let bookGroup, pages = [];
+        let currentPage = 0; 
+        let cinematicMode = false;
+        let cinematicTimer = 0;
+
+        const container = document.getElementById('canvas-container');
+
+        function init() {
+            scene = new THREE.Scene();
+            scene.fog = new THREE.FogExp2(0x05050a, 0.012);
+
+            camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            container.appendChild(renderer.domElement);
+
+            if (typeof THREE.OrbitControls !== 'undefined') {
+                controls = new THREE.OrbitControls(camera, renderer.domElement);
+                controls.enableDamping = true;
+                controls.dampingFactor = 0.05;
+                controls.maxPolarAngle = Math.PI / 2 + 0.05;
+                controls.minDistance = 4;
+                controls.maxDistance = 28;
+            }
+
+            // Lighting
+            const ambientLight = new THREE.AmbientLight(0x332940, 2.0);
+            scene.add(ambientLight);
+
+            const mainLight = new THREE.DirectionalLight(0xfff3e0, 2.2);
+            mainLight.position.set(5, 12, 8);
+            mainLight.castShadow = true;
+            mainLight.shadow.mapSize.width = 2048;
+            mainLight.shadow.mapSize.height = 2048;
+            scene.add(mainLight);
+
+            const magicalPointLight = new THREE.PointLight(0x6366f1, 3.0, 18);
+            magicalPointLight.position.set(-5, 4, 3);
+            scene.add(magicalPointLight);
+
+            const warmGlow = new THREE.PointLight(0xf59e0b, 2.5, 15);
+            warmGlow.position.set(5, 3, 3);
+            scene.add(warmGlow);
+
+            createMagicalDust();
+            createBook();
+            applyCameraState(0, true);
+
+            window.addEventListener('resize', onWindowResize);
+            setupUI();
+
+            animate();
+        }
+
+        let dustParticles;
+        function createMagicalDust() {
+            const particleCount = 280;
+            const geometry = new THREE.BufferGeometry();
+            const positions = new Float32Array(particleCount * 3);
+
+            for (let i = 0; i < particleCount * 3; i += 3) {
+                positions[i] = (Math.random() - 0.5) * 30;
+                positions[i + 1] = Math.random() * 14;
+                positions[i + 2] = (Math.random() - 0.5) * 30;
+            }
+
+            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+
+            const canvas = document.createElement('canvas');
+            canvas.width = 32;
+            canvas.height = 32;
+            const ctx = canvas.getContext('2d');
+            const gradient = ctx.createRadialGradient(16, 16, 0, 16, 16, 16);
+            gradient.addColorStop(0, 'rgba(251, 191, 36, 1)');
+            gradient.addColorStop(0.5, 'rgba(99, 102, 241, 0.4)');
+            gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, 32, 32);
+
+            const texture = new THREE.CanvasTexture(canvas);
+            const material = new THREE.PointsMaterial({
+                size: 0.4,
+                map: texture,
+                transparent: true,
+                blending: THREE.AdditiveBlending,
+                depthWrite: false
+            });
+
+            dustParticles = new THREE.Points(geometry, material);
+            scene.add(dustParticles);
+        }
+
+        function createPageTexture(pageData, side, pageIndex) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 1024;
+            canvas.height = 1024;
+            const ctx = canvas.getContext('2d');
+
+            const isFrontCover = (pageIndex === 0 && side === 'front');
+            const isBackCover = (pageIndex === storyPages.length - 1 && side === 'back');
+            const isInsideCover = (pageIndex === 0 && side === 'back') || (pageIndex === storyPages.length - 1 && side === 'front');
+
+            if (isFrontCover || isBackCover) {
+                ctx.fillStyle = '#1c130d';
+                ctx.fillRect(0, 0, 1024, 1024);
+
+                ctx.fillStyle = 'rgba(0,0,0,0.3)';
+                for(let i=0; i<4000; i++) {
+                    ctx.fillRect(Math.random() * 1024, Math.random() * 1024, 2, 2);
+                }
+
+                ctx.strokeStyle = '#d4af37';
+                ctx.lineWidth = 16;
+                ctx.strokeRect(40, 40, 944, 944);
+                ctx.lineWidth = 4;
+                ctx.strokeRect(65, 65, 894, 894);
+
+                drawOrnaments(ctx, 80, 80);
+                drawOrnaments(ctx, 944, 80, -1, 1);
+                drawOrnaments(ctx, 80, 944, 1, -1);
+                drawOrnaments(ctx, 944, 944, -1, -1);
+
+                if (isFrontCover) {
+                    ctx.fillStyle = '#fbbf24';
+                    ctx.font = 'bold 70px "Cinzel", serif';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    wrapText(ctx, pageData.title, 512, 340, 800, 85);
+
+                    ctx.font = 'italic 36px "IM Fell English", serif';
+                    ctx.fillStyle = '#d4af37';
+                    ctx.fillText(pageData.subtitle, 512, 600);
+
+                    ctx.font = '30px "Cinzel", serif';
+                    ctx.fillStyle = '#9ca3af';
+                    ctx.fillText(pageData.author, 512, 780);
+                } else {
+                    ctx.fillStyle = '#fbbf24';
+                    ctx.font = 'bold 50px "Cinzel", serif';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    wrapText(ctx, pageData.title, 512, 380, 800, 60);
+
+                    ctx.font = 'italic 30px "IM Fell English", serif';
+                    ctx.fillStyle = '#d4af37';
+                    ctx.fillText(pageData.subtitle, 512, 520);
+
+                    ctx.font = '24px "Cinzel", serif';
+                    ctx.fillStyle = '#9ca3af';
+                    ctx.fillText(pageData.author, 512, 660);
+                }
+            } else if (isInsideCover) {
+                ctx.fillStyle = '#261b14';
+                ctx.fillRect(0, 0, 1024, 1024);
+
+                ctx.fillStyle = 'rgba(212, 175, 55, 0.05)';
+                for(let i=0; i<3000; i++) {
+                    ctx.fillRect(Math.random()*1024, Math.random()*1024, 2, 2);
+                }
+
+                ctx.strokeStyle = '#8c6732';
+                ctx.lineWidth = 4;
+                ctx.strokeRect(60, 60, 904, 904);
+            } else {
+                ctx.fillStyle = '#fbf0d9';
+                ctx.fillRect(0, 0, 1024, 1024);
+
+                ctx.fillStyle = 'rgba(139, 69, 19, 0.05)';
+                for(let i=0; i<2500; i++) {
+                    ctx.fillRect(Math.random()*1024, Math.random()*1024, 3, 3);
+                }
+
+                ctx.strokeStyle = '#b48a4f';
+                ctx.lineWidth = 4;
+                ctx.strokeRect(50, 50, 924, 924);
+
+                if (side === 'front') {
+                    ctx.fillStyle = '#3d2314';
+                    ctx.font = 'bold 44px "Cinzel", serif';
+                    ctx.textAlign = 'center';
+                    wrapText(ctx, pageData.title, 512, 110, 800, 50);
+
+                    ctx.strokeStyle = '#b48a4f';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.moveTo(250, 170);
+                    ctx.lineTo(774, 170);
+                    ctx.stroke();
+
+                    drawIllustration(ctx, pageData.illustration, 512, 380);
+
+                    ctx.fillStyle = '#2c1810';
+                    ctx.font = '32px "IM Fell English", serif';
+                    ctx.textAlign = 'center';
+                    wrapText(ctx, pageData.text, 512, 590, 820, 48);
+                } else {
+                    ctx.fillStyle = '#3d2314';
+                    ctx.font = 'italic 28px "IM Fell English", serif';
+                    ctx.textAlign = 'center';
+                    ctx.fillText("~ The Star Weaver's Chronicle ~", 512, 512);
+                }
+            }
+
+            return new THREE.CanvasTexture(canvas);
+        }
+
+        function drawOrnaments(ctx, x, y, scaleX = 1, scaleY = 1) {
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.scale(scaleX, scaleY);
+            ctx.strokeStyle = '#d4af37';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            ctx.lineTo(50, 0);
+            ctx.moveTo(0, 0);
+            ctx.lineTo(0, 50);
+            ctx.arc(30, 30, 20, 0, Math.PI / 2);
+            ctx.stroke();
+            ctx.restore();
+        }
+
+        function drawIllustration(ctx, type, cx, cy) {
+            ctx.save();
+            ctx.strokeStyle = '#6366f1';
+            ctx.fillStyle = 'rgba(99, 102, 241, 0.1)';
+            ctx.lineWidth = 3;
+
+            ctx.beginPath();
+            ctx.arc(cx, cy, 130, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+
+            ctx.fillStyle = '#4f46e5';
+            ctx.strokeStyle = '#d4af37';
+
+            if (type === 'loom') {
+                ctx.strokeRect(cx - 60, cy - 60, 120, 120);
+                ctx.beginPath();
+                for(let i = -40; i <= 40; i += 20) {
+                    ctx.moveTo(cx + i, cy - 60);
+                    ctx.lineTo(cx + i, cy + 60);
+                }
+                ctx.stroke();
+            } else if (type === 'sprite') {
+                ctx.beginPath();
+                for (let i = 0; i < 5; i++) {
+                    let angle = (i * 4 * Math.PI) / 5 - Math.PI / 2;
+                    let px = cx + Math.cos(angle) * 45;
+                    let py = cy + Math.sin(angle) * 45;
+                    if (i === 0) ctx.moveTo(px, py);
+                    else ctx.lineTo(px, py);
+                }
+                ctx.closePath();
+                ctx.fillStyle = '#fbbf24';
+                ctx.fill();
+                ctx.stroke();
+            } else if (type === 'sea') {
+                ctx.beginPath();
+                ctx.moveTo(cx - 70, cy + 20);
+                ctx.quadraticCurveTo(cx - 35, cy - 20, cx, cy + 20);
+                ctx.quadraticCurveTo(cx + 35, cy + 60, cx + 70, cy + 20);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(cx - 50, cy - 20);
+                ctx.quadraticCurveTo(cx - 25, cy - 50, cx, cy - 20);
+                ctx.quadraticCurveTo(cx + 25, cy + 10, cx + 50, cy - 20);
+                ctx.stroke();
+            } else if (type === 'dawn') {
+                ctx.beginPath();
+                ctx.arc(cx, cy + 30, 40, Math.PI, 0, false);
+                ctx.fill();
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(cx - 60, cy + 30);
+                ctx.lineTo(cx + 60, cy + 30);
+                ctx.stroke();
+            }
+            ctx.restore();
+        }
+
+        function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
+            const paragraphs = text.split('\n');
+            let currentY = y;
+            for (let p = 0; p < paragraphs.length; p++) {
+                const words = paragraphs[p].split(' ');
+                let line = '';
+                for(let n = 0; n < words.length; n++) {
+                    let testLine = line + words[n] + ' ';
+                    let metrics = ctx.measureText(testLine);
+                    let testWidth = metrics.width;
+                    if (testWidth > maxWidth && n > 0) {
+                        ctx.fillText(line, x, currentY);
+                        line = words[n] + ' ';
+                        currentY += lineHeight;
+                    } else {
+                        line = testLine;
+                    }
+                }
+                ctx.fillText(line, x, currentY);
+                currentY += lineHeight;
+            }
+        }
+
+        function createBook() {
+            bookGroup = new THREE.Group();
+            scene.add(bookGroup);
+
+            const pageWidth = 3.6;
+            const pageHeight = 5.0;
+
+            const spineGeo = new THREE.CylinderGeometry(0.16, 0.16, pageHeight + 0.2, 16);
+            const leatherMat = new THREE.MeshStandardMaterial({ color: 0x1c130d, roughness: 0.6, metalness: 0.1 });
+            const spineMesh = new THREE.Mesh(spineGeo, leatherMat);
+            spineMesh.position.set(0, 0, 0);
+            spineMesh.castShadow = true;
+            spineMesh.receiveShadow = true;
+            bookGroup.add(spineMesh);
+
+            for (let i = -2; i <= 2; i++) {
+                const ribGeo = new THREE.CylinderGeometry(0.17, 0.17, 0.05, 16);
+                const ribMat = new THREE.MeshStandardMaterial({ color: 0xd4af37, roughness: 0.3, metalness: 0.8 });
+                const rib = new THREE.Mesh(ribGeo, ribMat);
+                rib.position.set(0, i * 1.0, 0);
+                bookGroup.add(rib);
+            }
+
+            pages = [];
+
+            for (let i = 0; i < storyPages.length; i++) {
+                const pagePivot = new THREE.Group();
+
+                // Multi-segmented plane geometry for subtle natural page bending
+                const pageGeo = new THREE.PlaneGeometry(pageWidth, pageHeight, 20, 12);
+                pageGeo.translate(pageWidth / 2, 0, 0);
+
+                const frontTexture = createPageTexture(storyPages[i], 'front', i);
+                const frontMat = new THREE.MeshStandardMaterial({
+                    map: frontTexture,
+                    roughness: 0.75,
+                    side: THREE.FrontSide,
+                    transparent: false,
+                    depthWrite: true
+                });
+                const frontMesh = new THREE.Mesh(pageGeo, frontMat);
+                frontMesh.castShadow = true;
+                frontMesh.receiveShadow = true;
+                pagePivot.add(frontMesh);
+
+                const backTexture = createPageTexture(storyPages[i], 'back', i);
+                const backMat = new THREE.MeshStandardMaterial({
+                    map: backTexture,
+                    roughness: 0.75,
+                    side: THREE.FrontSide,
+                    transparent: false,
+                    depthWrite: true
+                });
+                const backMesh = new THREE.Mesh(pageGeo, backMat);
+                backMesh.rotation.y = Math.PI;
+                backMesh.position.x = pageWidth;
+                backMesh.castShadow = true;
+                backMesh.receiveShadow = true;
+                pagePivot.add(backMesh);
+
+                bookGroup.add(pagePivot);
+                pages.push({
+                    pivot: pagePivot,
+                    frontMesh: frontMesh,
+                    backMesh: backMesh,
+                    currentIndex: i
+                });
+            }
+
+            updateBookState(true);
+        }
+
+        let animating = false;
+
+        function setPageDepths(pageTarget) {
+            const total = storyPages.length;
+            for (let i = 0; i < total; i++) {
+                if (pageTarget === 0) {
+                    pages[i].pivot.position.z = 0.04 + (total - i) * 0.02;
+                } else if (pageTarget === total - 1) {
+                    pages[i].pivot.position.z = 0.04 + i * 0.02;
+                } else {
+                    if (i < pageTarget) {
+                        pages[i].pivot.position.z = 0.04 + i * 0.02;
+                    } else {
+                        pages[i].pivot.position.z = 0.04 + (total - i) * 0.02;
+                    }
+                }
+            }
+        }
+
+        function getTargetRotations(pageTarget) {
+            const total = storyPages.length;
+            let targetRotations = [];
+            for (let i = 0; i < total; i++) {
+                if (pageTarget === 0) {
+                    targetRotations.push(0);
+                } else if (pageTarget === total - 1) {
+                    targetRotations.push(-Math.PI);
+                } else {
+                    if (i < pageTarget) {
+                        targetRotations.push(i === 0 ? -Math.PI - 0.25 : -Math.PI);
+                    } else {
+                        targetRotations.push(i === total - 1 ? 0.25 : 0);
+                    }
+                }
+            }
+            return targetRotations;
+        }
+
+        function applyPageBend(pageObj, progress) {
+            const angle = progress * Math.PI;
+            const bendAmount = Math.sin(angle) * 0.18; // Subtle wave curve
+            
+            [pageObj.frontMesh, pageObj.backMesh].forEach(mesh => {
+                const pos = mesh.geometry.attributes.position;
+                for (let j = 0; j < pos.count; j++) {
+                    let x = pos.getX(j);
+                    let u = x / 3.6; // normalized width
+                    let z = Math.sin(u * Math.PI) * bendAmount;
+                    // Reset and apply gentle curve along Z
+                    pos.setZ(j, z);
+                }
+                pos.needsUpdate = true;
+            });
+        }
+
+        function resetPageBend(pageObj) {
+            [pageObj.frontMesh, pageObj.backMesh].forEach(mesh => {
+                const pos = mesh.geometry.attributes.position;
+                for (let j = 0; j < pos.count; j++) {
+                    pos.setZ(j, 0);
+                }
+                pos.needsUpdate = true;
+            });
+        }
+
+        function turnToPage(targetPageIndex) {
+            if (animating) return;
+            animating = true;
+
+            if (targetPageIndex >= storyPages.length) {
+                targetPageIndex = 0;
+                showMessage("Book closed at back. Reopening cover.");
+            }
+
+            currentPage = targetPageIndex;
+            updateUIState();
+            setPageDepths(currentPage);
+
+            let startTime = performance.now();
+            let duration = 900;
+
+            let startRotations = pages.map(p => p.pivot.rotation.y);
+            let targetRotations = getTargetRotations(currentPage);
+
+            // Determine which page is actively turning
+            let turningPageIndex = -1;
+            for (let i = 0; i < pages.length; i++) {
+                if (Math.abs(startRotations[i] - targetRotations[i]) > 0.1) {
+                    turningPageIndex = i;
+                }
+            }
+
+            const startCamPos = camera.position.clone();
+            const startCamTarget = controls ? controls.target.clone() : new THREE.Vector3(0, 0, 0);
+            const targetCamConfig = getCameraConfigForPage(currentPage);
+
+            function animateTransition(time) {
+                let elapsed = time - startTime;
+                let progress = Math.min(elapsed / duration, 1);
+                let easeProgress = progress < 0.5 ? 2 * progress * progress : -1 + (4 - 2 * progress) * progress;
+
+                for (let i = 0; i < pages.length; i++) {
+                    pages[i].pivot.rotation.y = startRotations[i] + (targetRotations[i] - startRotations[i]) * easeProgress;
+                }
+
+                if (turningPageIndex !== -1) {
+                    applyPageBend(pages[turningPageIndex], easeProgress);
+                }
+
+                camera.position.lerpVectors(startCamPos, targetCamConfig.pos, easeProgress);
+                if (controls) {
+                    controls.target.lerpVectors(startCamTarget, targetCamConfig.target, easeProgress);
+                    controls.update();
+                }
+
+                if (progress < 1) {
+                    requestAnimationFrame(animateTransition);
+                } else {
+                    if (turningPageIndex !== -1) {
+                        resetPageBend(pages[turningPageIndex]);
+                    }
+                    animating = false;
+                }
+            }
+
+            requestAnimationFrame(animateTransition);
+        }
+
+        function getCameraConfigForPage(pageIdx) {
+            const aspect = window.innerWidth / window.innerHeight;
+            const isMobile = aspect < 1.0;
+
+            if (pageIdx === 0) {
+                return {
+                    pos: new THREE.Vector3(1.8, isMobile ? 0.4 : 0.8, isMobile ? 12.0 : 8.5),
+                    target: new THREE.Vector3(1.8, 0, 0)
+                };
+            } else if (pageIdx === storyPages.length - 1) {
+                return {
+                    pos: new THREE.Vector3(-1.8, isMobile ? 0.4 : 0.8, isMobile ? 12.0 : 8.5),
+                    target: new THREE.Vector3(-1.8, 0, 0)
+                };
+            } else {
+                return {
+                    pos: new THREE.Vector3(0, isMobile ? 0.6 : 0.8, isMobile ? 13.5 : 9.5),
+                    target: new THREE.Vector3(0, 0, 0)
+                };
+            }
+        }
+
+        function applyCameraState(pageIdx, instant = false) {
+            const config = getCameraConfigForPage(pageIdx);
+            camera.position.copy(config.pos);
+            if (controls) {
+                controls.target.copy(config.target);
+                controls.update();
+            }
+        }
+
+        function updateBookState(instant = false) {
+            setPageDepths(currentPage);
+            let targetRotations = getTargetRotations(currentPage);
+            for (let i = 0; i < pages.length; i++) {
+                pages[i].pivot.rotation.y = targetRotations[i];
+            }
+            applyCameraState(currentPage, instant);
+        }
+
+        function setupUI() {
+            const nextBtn = document.getElementById('next-btn');
+            const prevBtn = document.getElementById('prev-btn');
+            const zoomInBtn = document.getElementById('zoom-in');
+            const zoomOutBtn = document.getElementById('zoom-out');
+            const resetViewBtn = document.getElementById('reset-view');
+            const cinematicBtn = document.getElementById('cinematic-btn');
+
+            nextBtn.addEventListener('click', () => {
+                if (currentPage < storyPages.length - 1) {
+                    turnToPage(currentPage + 1);
+                } else {
+                    turnToPage(0);
+                    showMessage("Book closed at cover.");
+                }
+            });
+
+            prevBtn.addEventListener('click', () => {
+                if (currentPage > 0) {
+                    turnToPage(currentPage - 1);
+                }
+            });
+
+            zoomInBtn.addEventListener('click', () => zoomCamera(-1.5));
+            zoomOutBtn.addEventListener('click', () => zoomCamera(1.5));
+            resetViewBtn.addEventListener('click', resetCamera);
+            cinematicBtn.addEventListener('click', toggleCinematicMode);
+
+            updateUIState();
+        }
+
+        function updateUIState() {
+            const indicator = document.getElementById('page-indicator');
+            const nextBtn = document.getElementById('next-btn');
+            const prevBtn = document.getElementById('prev-btn');
+
+            if (currentPage === 0) {
+                indicator.textContent = "Cover";
+            } else if (currentPage === storyPages.length - 1) {
+                indicator.textContent = "Back Cover";
+            } else {
+                indicator.textContent = `Page ${currentPage} of 4`;
+            }
+            prevBtn.disabled = currentPage === 0;
+            nextBtn.disabled = false;
+        }
+
+        function showMessage(text) {
+            const box = document.getElementById('message-box');
+            const txt = document.getElementById('message-text');
+            txt.textContent = text;
+            box.classList.remove('hidden');
+            setTimeout(() => box.classList.add('hidden'), 3500);
+        }
+
+        function zoomCamera(delta) {
+            const direction = new THREE.Vector3();
+            camera.getWorldDirection(direction);
+            camera.position.addScaledVector(direction, delta);
+        }
+
+        function resetCamera() {
+            const config = getCameraConfigForPage(currentPage);
+            let startPos = camera.position.clone();
+            let startTarget = controls ? controls.target.clone() : new THREE.Vector3(0, 0, 0);
+            let startTime = performance.now();
+            let duration = 800;
+
+            function animateReset(time) {
+                let progress = Math.min((time - startTime) / duration, 1);
+                let ease = 1 - Math.pow(1 - progress, 3);
+                camera.position.lerpVectors(startPos, config.pos, ease);
+                if (controls) {
+                    controls.target.lerpVectors(startTarget, config.target, ease);
+                    controls.update();
+                }
+                if (progress < 1) requestAnimationFrame(animateReset);
+            }
+            requestAnimationFrame(animateReset);
+            showMessage("Camera view reset.");
+        }
+
+        function toggleCinematicMode() {
+            cinematicMode = !cinematicMode;
+            const btnText = document.getElementById('cinematic-text');
+            const btn = document.getElementById('cinematic-btn');
+
+            if (cinematicMode) {
+                btnText.textContent = "Exit Cinematic";
+                btn.classList.add('bg-amber-600', 'text-white');
+                showMessage("Cinematic auto-play mode activated.");
+                cinematicTimer = performance.now();
+            } else {
+                btnText.textContent = "Cinematic Mode";
+                btn.classList.remove('bg-amber-600', 'text-white');
+                showMessage("Cinematic mode paused.");
+            }
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        let clock = new THREE.Clock();
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            let time = clock.getElapsedTime();
+
+            if (dustParticles) {
+                dustParticles.rotation.y = time * 0.025;
+                dustParticles.rotation.x = Math.sin(time * 0.015) * 0.04;
+            }
+
+            if (bookGroup && currentPage > 0 && currentPage < storyPages.length - 1) {
+                bookGroup.position.y = Math.sin(time * 1.5) * 0.04;
+                bookGroup.rotation.y = Math.sin(time * 0.5) * 0.015;
+            } else if (bookGroup) {
+                bookGroup.position.y = 0;
+                bookGroup.rotation.y = 0;
+            }
+
+            if (cinematicMode) {
+                let isCover = (currentPage === 0 || currentPage === storyPages.length - 1);
+                let radius = isCover ? 6.5 : 10.5;
+                let height = isCover ? 1.2 : 2.0;
+                let targetX = currentPage === 0 ? 1.8 : (currentPage === storyPages.length - 1 ? -1.8 : 0);
+
+                camera.position.x = targetX + Math.sin(time * 0.2) * radius;
+                camera.position.z = Math.cos(time * 0.2) * radius;
+                camera.position.y = height + Math.sin(time * 0.4) * 0.3;
+                camera.lookAt(targetX, 0, 0);
+
+                if (performance.now() - cinematicTimer > 7000) {
+                    cinematicTimer = performance.now();
+                    if (currentPage < storyPages.length - 1) {
+                        turnToPage(currentPage + 1);
+                    } else {
+                        turnToPage(0);
+                    }
+                }
+            } else {
+                if (controls) controls.update();
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>
