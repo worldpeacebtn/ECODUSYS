@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Quantum Holographic Codex: Stellar Matrix 8K</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Three.js and OrbitControls -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;800;900&family=Share+Tech+Mono&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #010206;
+            color: #f8fafc;
+            overflow: hidden;
+            touch-action: none;
+        }
+        .sci-font { font-family: 'Orbitron', sans-serif; }
+        .mono-font { font-family: 'Share Tech Mono', monospace; }
+        .glass-hud {
+            background: rgba(3, 7, 18, 0.90);
+            backdrop-filter: blur(30px);
+            -webkit-backdrop-filter: blur(30px);
+            border: 1px solid rgba(56, 189, 248, 0.5);
+            box-shadow: 0 0 60px rgba(14, 165, 233, 0.35), inset 0 0 25px rgba(56, 189, 248, 0.15);
+        }
+        .glass-modal {
+            background: rgba(2, 6, 23, 0.96);
+            backdrop-filter: blur(35px);
+            border: 1px solid rgba(6, 182, 212, 0.7);
+            box-shadow: 0 0 70px rgba(6, 182, 212, 0.5);
+        }
+        .glow-cyan { text-shadow: 0 0 30px rgba(6, 182, 212, 0.95); }
+        .glow-gold { text-shadow: 0 0 30px rgba(251, 191, 36, 0.95); }
+        .scanline {
+            background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0) 50%, rgba(6, 182, 212, 0.025) 50%, rgba(6, 182, 212, 0.025));
+            background-size: 100% 4px;
+        }
+    </style>
+</head>
+<body class="h-full flex flex-col justify-between select-none relative scanline">
+
+    <div id="canvas-container" class="absolute inset-0 z-0 cursor-grab active:cursor-grabbing"></div>
+
+    <!-- Top Telemetry & HUD Overlay -->
+    <header class="relative z-20 p-4 md:p-6 flex justify-between items-center pointer-events-none">
+        <div class="glass-hud px-4 py-2.5 rounded-2xl pointer-events-auto border border-cyan-500/55 flex items-center gap-3 shadow-2xl">
+            <div class="relative w-7 h-7 rounded-full border border-cyan-400 flex items-center justify-center overflow-hidden bg-cyan-950/50">
+                <div class="w-2.5 h-2.5 rounded-full bg-cyan-300 animate-ping"></div>
+            </div>
+            <div>
+                <h1 id="hud-title" class="sci-font text-xs md:text-base text-amber-300 glow-gold font-bold tracking-widest transition-colors duration-700">SOLAR SYSTEM SECTOR 01</h1>
+                <p id="hud-subtitle" class="mono-font text-[9px] md:text-[11px] text-cyan-300/80 tracking-widest">ORBITING EARTH | UTOPIAN ARCHIVE</p>
+            </div>
+        </div>
+
+        <div class="pointer-events-auto flex items-center gap-2">
+            <button id="cinematic-guide-btn" class="px-3.5 py-2 glass-hud hover:bg-cyan-950/70 border border-cyan-400/50 rounded-xl text-cyan-200 text-xs sci-font transition shadow-xl flex items-center gap-1.5">
+                <span>🪐</span> <span id="guide-text">Cinematic Tour: Off</span>
+            </button>
+            <button id="sound-btn" class="px-3 py-2 glass-hud hover:bg-cyan-950/70 border border-cyan-400/50 rounded-xl text-cyan-200 text-xs sci-font transition shadow-xl">
+                <span id="sound-text">Audio: Off</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Bottom Controls & Navigation Footer -->
+    <footer class="relative z-20 p-4 md:p-6 flex flex-col md:flex-row justify-between items-center gap-3 pointer-events-none bg-gradient-to-t from-[#010206] via-[#010206]/85 to-transparent">
+        <div class="pointer-events-auto flex items-center gap-3 glass-hud px-5 py-3 rounded-2xl border border-cyan-500/60 shadow-2xl">
+            <button id="prev-btn" class="text-amber-300 hover:text-white disabled:opacity-20 disabled:cursor-not-allowed transition transform hover:scale-125">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                </svg>
+            </button>
+            <span id="page-indicator" class="sci-font text-amber-200 text-xs md:text-sm tracking-widest px-2 min-w-[210px] text-center glow-gold">CODEX CLOSED</span>
+            <button id="next-btn" class="text-amber-300 hover:text-white disabled:opacity-20 disabled:cursor-not-allowed transition transform hover:scale-125">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                </svg>
+            </button>
+        </div>
+
+        <div class="pointer-events-auto flex items-center gap-2">
+            <button id="pulse-holo-btn" class="px-3.5 py-2 glass-hud hover:bg-cyan-950/80 border border-cyan-400/60 rounded-xl text-cyan-300 text-xs sci-font transition shadow-lg">
+                ✨ Quantum Surge
+            </button>
+            <button id="close-book-btn" class="px-3.5 py-2 glass-hud hover:bg-cyan-950/80 border border-amber-500/60 rounded-xl text-amber-300 text-xs sci-font transition shadow-lg">
+                Close Codex
+            </button>
+            <button id="reset-view" class="px-3.5 py-2 glass-hud hover:bg-cyan-950/80 border border-cyan-400/50 rounded-xl text-cyan-300 text-xs sci-font transition shadow-lg">
+                Reset Cam
+            </button>
+        </div>
+    </footer>
+
+    <!-- Notification Box -->
+    <div id="message-box" class="fixed top-24 left-1/2 transform -translate-x-1/2 z-50 glass-modal px-5 py-2.5 rounded-xl shadow-2xl text-cyan-200 text-xs mono-font hidden border border-cyan-500/80 text-center">
+        <span id="message-text"></span>
+    </div>
+
+    <script>
+        const storyPages = [
+            {
+                type: 'cover',
+                title: "EARTH: UTOPIAN CRADLE\nSTELLAR MATRIX 8K",
+                subtitle: "TOUCH TO ENGAGE HOLOGRAPHIC ARCHIVE",
+                author: "GLOBAL NEURAL NODE: EARTH SECTOR",
+                themeColor: 0x06b6d4,
+                bgTint: 0x010206,
+                ambientColor: 0x0a1128
+            },
+            {
+                type: 'story',
+                title: "CHAPTER I: THE EARTH SANCTUARY",
+                text: "Earth stands as the heart of our solar system. In this utopian cradle, advanced bio-grids, clean fusion energy, and zero-scarcity education ensure every child thrives in freedom and wonder.",
+                holoType: 'earth',
+                themeColor: 0x38bdf8,
+                bgTint: 0x020817,
+                ambientColor: 0x041028
+            },
+            {
+                type: 'story',
+                title: "CHAPTER II: MARS QUANTUM NEXUS",
+                text: "The Red Planet has transformed into an interstellar research hub. Terran scientists and Martian engineers collaborate on quantum entanglement communications spanning the galaxy.",
+                holoType: 'mars',
+                themeColor: 0xf97316,
+                bgTint: 0x140602,
+                ambientColor: 0x2a0c04
+            },
+            {
+                type: 'story',
+                title: "CHAPTER III: JUPITER ASTRAL RING",
+                text: "Orbiting the gas giant, majestic space stations harvest zero-point energy and study cosmic nebulas. Here, humanity learns the boundless secrets of stellar evolution.",
+                holoType: 'jupiter',
+                themeColor: 0xfbbf24,
+                bgTint: 0x140c02,
+                ambientColor: 0x241804
+            },
+            {
+                type: 'story',
+                title: "CHAPTER IV: THE ETERNAL DAWN",
+                text: "Humanity stands united at the threshold of the stars. Wisdom is our currency, discovery is our journey, and the cosmos is our shared home.",
+                holoType: 'utopia',
+                themeColor: 0x8b5cf6,
+                bgTint: 0x0b0218,
+                ambientColor: 0x16082c
+            },
+            {
+                type: 'cover',
+                title: "ARCHIVE TERMINUS",
+                subtitle: "SECTOR 01 - SECURE ARCHIVE SEALED",
+                author: "CELESTIAL PRESS © MMCXXVI",
+                themeColor: 0xf43f5e,
+                bgTint: 0x100204,
+                ambientColor: 0x220408
+            }
+        ];
+
+        let scene, camera, renderer, controls, raycaster, mouse;
+        let bookGroup, pages = [];
+        let holographicGroup, activeHologramMesh = null;
+        let starField, starGeo;
+        let planets = [];
+        let ambientLight, pointLightCyan, pointLightGold;
+        let currentPage = 0; 
+        let cinematicTourActive = false;
+        let tourTimer = 0;
+        let audioCtx = null;
+        let soundEnabled = false;
+        let isAnimating = false;
+        let pointerDownPos = { x: 0, y: 0 };
+
+        const container = document.getElementById('canvas-container');
+
+        function init() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x010206);
+            scene.fog = new THREE.FogExp2(0x010206, 0.0018);
+
+            const aspect = window.innerWidth / window.innerHeight;
+            camera = new THREE.PerspectiveCamera(40, aspect, 0.1, 1000);
+            
+            if (window.innerWidth < 768) {
+                camera.position.set(0, 5.2, 11.0);
+            } else {
+                camera.position.set(0, 3.8, 8.8);
+            }
+
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.setClearColor(0x010206, 1.0);
+            renderer.shadowMap.enabled = true;
+            renderer.toneMapping = THREE.ACESFilmicToneMapping;
+            renderer.toneMappingExposure = 1.4;
+            container.appendChild(renderer.domElement);
+
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.maxPolarAngle = Math.PI / 2 + 0.05;
+            controls.minDistance = 3.0;
+            controls.maxDistance = 22;
+            controls.target.set(0, 0.8, 0);
+
+            raycaster = new THREE.Raycaster();
+            mouse = new THREE.Vector2();
+
+            ambientLight = new THREE.AmbientLight(0x0f172a, 3.8);
+            scene.add(ambientLight);
+
+            const directionalLight = new THREE.DirectionalLight(0xe0f2fe, 4.8);
+            directionalLight.position.set(6, 16, 8);
+            scene.add(directionalLight);
+
+            pointLightCyan = new THREE.PointLight(0x06b6d4, 8.0, 28);
+            pointLightCyan.position.set(-6, 6, 4);
+            scene.add(pointLightCyan);
+
+            pointLightGold = new THREE.PointLight(0xfbbf24, 7.5, 28);
+            pointLightGold.position.set(6, 6, 4);
+            scene.add(pointLightGold);
+
+            createUniverseEnvironment();
+            createCodexBook();
+            setupUIEvents();
+
+            window.addEventListener('resize', onWindowResize);
+            container.addEventListener('pointerdown', onPointerDown);
+            container.addEventListener('pointerup', onPointerUp);
+
+            animate();
+        }
+
+        function createUniverseEnvironment() {
+            // Dense stellar stardust particles
+            const count = 3500;
+            const pos = new Float32Array(count * 3);
+            const col = new Float32Array(count * 3);
+
+            for (let i = 0; i < count * 3; i += 3) {
+                pos[i] = (Math.random() - 0.5) * 160;
+                pos[i+1] = (Math.random() - 0.5) * 140;
+                pos[i+2] = (Math.random() - 0.5) * 160;
+
+                const rand = Math.random();
+                if (rand > 0.6) {
+                    col[i] = 1.0; col[i+1] = 0.85; col[i+2] = 0.4;
+                } else if (rand > 0.3) {
+                    col[i] = 0.2; col[i+1] = 0.9; col[i+2] = 1.0;
+                } else {
+                    col[i] = 0.95; col[i+1] = 0.95; col[i+2] = 1.0;
+                }
+            }
+
+            starGeo = new THREE.BufferGeometry();
+            starGeo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+            starGeo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+
+            const mat = new THREE.PointsMaterial({
+                size: 0.45,
+                vertexColors: true,
+                transparent: true,
+                opacity: 0.95,
+                blending: THREE.AdditiveBlending
+            });
+
+            starField = new THREE.Points(starGeo, mat);
+            scene.add(starField);
+
+            // Orbiting Planetary Bodies with clickable exploration
+            const planetData = [
+                { name: "Earth Biosphere Sanctuary", color: 0x38bdf8, dist: 11.0, size: 1.0, speed: 0.1, chapterIndex: 1 },
+                { name: "Mars Quantum Nexus", color: 0xf97316, dist: 15.5, size: 1.2, speed: 0.07, chapterIndex: 2 },
+                { name: "Jupiter Astral Ring", color: 0xfbbf24, dist: 20.0, size: 1.6, speed: 0.04, chapterIndex: 3 }
+            ];
+
+            planets = planetData.map((data, idx) => {
+                const pGeo = new THREE.SphereGeometry(data.size, 32, 32);
+                const pMat = new THREE.MeshStandardMaterial({
+                    color: data.color,
+                    roughness: 0.3,
+                    metalness: 0.2,
+                    emissive: data.color,
+                    emissiveIntensity: 0.4
+                });
+                const mesh = new THREE.Mesh(pGeo, pMat);
+                scene.add(mesh);
+                return { mesh, data, angle: idx * ((Math.PI * 2) / planetData.length) };
+            });
+        }
+
+        function createPageTexture(data, isCover = false) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 1024;
+            canvas.height = 1024;
+            const ctx = canvas.getContext('2d');
+
+            ctx.fillStyle = 'rgba(2, 6, 23, 0.97)';
+            ctx.fillRect(0, 0, 1024, 1024);
+
+            if (isCover) {
+                ctx.strokeStyle = 'rgba(6, 182, 212, 0.45)';
+                ctx.lineWidth = 3;
+                for (let i = 0; i < 1024; i += 64) {
+                    ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, 1024); ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(1024, i); ctx.stroke();
+                }
+
+                ctx.strokeStyle = '#fbbf24';
+                ctx.lineWidth = 14;
+                ctx.strokeRect(60, 60, 904, 904);
+
+                ctx.fillStyle = '#fbbf24';
+                ctx.font = '900 52px "Orbitron", sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                wrapText(ctx, data.title, 512, 380, 780, 68);
+
+                ctx.font = '22px "Share Tech Mono", monospace';
+                ctx.fillStyle = '#38bdf8';
+                ctx.fillText(data.subtitle, 512, 580);
+
+                ctx.font = '18px "Share Tech Mono", monospace';
+                ctx.fillStyle = '#94a3b8';
+                ctx.fillText(data.author, 512, 750);
+            } else {
+                ctx.fillStyle = 'rgba(6, 182, 212, 0.12)';
+                for (let i = 0; i < 1024; i += 48) {
+                    ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, 1024); ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(1024, i); ctx.stroke();
+                }
+
+                ctx.strokeStyle = '#06b6d4';
+                ctx.lineWidth = 6;
+                ctx.strokeRect(50, 50, 924, 924);
+
+                ctx.fillStyle = '#fbbf24';
+                ctx.font = '800 34px "Orbitron", sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(data.title, 512, 115);
+
+                ctx.strokeStyle = '#38bdf8';
+                ctx.lineWidth = 3;
+                ctx.beginPath(); ctx.moveTo(200, 150); ctx.lineTo(824, 150); ctx.stroke();
+
+                ctx.fillStyle = '#ffffff';
+                ctx.font = '500 27px "Inter", sans-serif';
+                ctx.textAlign = 'center';
+                wrapText(ctx, data.text, 512, 640, 820, 42);
+            }
+
+            return new THREE.CanvasTexture(canvas);
+        }
+
+        function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
+            const words = text.split(' ');
+            let line = '';
+            let currentY = y;
+            for (let n = 0; n < words.length; n++) {
+                let testLine = line + words[n] + ' ';
+                if (ctx.measureText(testLine).width > maxWidth && n > 0) {
+                    ctx.fillText(line, x, currentY);
+                    line = words[n] + ' ';
+                    currentY += lineHeight;
+                } else {
+                    line = testLine;
+                }
+            }
+            ctx.fillText(line, x, currentY);
+        }
+
+        function createCodexBook() {
+            bookGroup = new THREE.Group();
+            scene.add(bookGroup);
+
+            holographicGroup = new THREE.Group();
+            holographicGroup.position.set(0, 3.2, 0);
+            scene.add(holographicGroup);
+
+            const pageWidth = 3.6;
+            const pageHeight = 5.2;
+            const segments = 24;
+
+            const spineGroup = new THREE.Group();
+            const centralRodGeo = new THREE.CylinderGeometry(0.12, 0.12, pageHeight + 0.35, 16);
+            const spineMat = new THREE.MeshPhysicalMaterial({ color: 0x06b6d4, roughness: 0.15, metalness: 0.95, emissive: 0x06b6d4, emissiveIntensity: 0.5 });
+            const centralRod = new THREE.Mesh(centralRodGeo, spineMat);
+            spineGroup.add(centralRod);
+
+            for (let i = -3; i <= 3; i++) {
+                const ringGeo = new THREE.TorusGeometry(0.18, 0.03, 12, 24);
+                const ring = new THREE.Mesh(ringGeo, spineMat);
+                ring.rotation.x = Math.PI / 2;
+                ring.position.set(0, i * 0.75, 0);
+                spineGroup.add(ring);
+            }
+            bookGroup.add(spineGroup);
+
+            pages = [];
+
+            for (let i = 0; i < storyPages.length; i++) {
+                const pagePivot = new THREE.Group();
+                pagePivot.position.z = (storyPages.length - i) * 0.12;
+
+                const pageGeo = new THREE.PlaneGeometry(pageWidth, pageHeight, segments, segments);
+                pageGeo.translate(pageWidth / 2, 0, 0);
+
+                const isCover = (i === 0 || i === storyPages.length - 1);
+                const frontTex = createPageTexture(storyPages[i], isCover);
+                
+                const frontMat = new THREE.MeshPhysicalMaterial({
+                    map: frontTex,
+                    roughness: 0.1,
+                    metalness: 0.1,
+                    transmission: 0.7,
+                    thickness: 0.9,
+                    transparent: true,
+                    opacity: 0.97,
+                    side: THREE.DoubleSide
+                });
+
+                const frontMesh = new THREE.Mesh(pageGeo, frontMat);
+                pagePivot.add(frontMesh);
+
+                bookGroup.add(pagePivot);
+                pages.push({ pivot: pagePivot, index: i });
+            }
+
+            updateBookStateImmediate(0);
+        }
+
+        function updateHologramForPage(pageIdx) {
+            while(holographicGroup.children.length > 0) { 
+                holographicGroup.remove(holographicGroup.children[0]); 
+            }
+
+            if (pageIdx === 0 || pageIdx >= storyPages.length - 1) {
+                activeHologramMesh = null;
+                return;
+            }
+
+            const pageData = storyPages[pageIdx];
+            const holoType = pageData.holoType;
+            const group = new THREE.Group();
+
+            // Miniature holographic planet / celestial sphere floating above the page
+            const sphereGeo = new THREE.SphereGeometry(1.0, 32, 32);
+            let color = 0x38bdf8;
+            if (holoType === 'mars') color = 0xf97316;
+            if (holoType === 'jupiter') color = 0xfbbf24;
+            if (holoType === 'utopia') color = 0x8b5cf6;
+
+            const sphereMat = new THREE.MeshStandardMaterial({
+                color: color,
+                roughness: 0.2,
+                metalness: 0.3,
+                emissive: color,
+                emissiveIntensity: 0.6,
+                wireframe: false
+            });
+            const holoPlanet = new THREE.Mesh(sphereGeo, sphereMat);
+            group.add(holoPlanet);
+
+            // Wireframe ring orbit
+            const ringGeo = new THREE.TorusGeometry(1.4, 0.02, 16, 48);
+            const ringMat = new THREE.MeshBasicMaterial({ color: color, transparent: true, opacity: 0.7 });
+            const ring = new THREE.Mesh(ringGeo, ringMat);
+            ring.rotation.x = Math.PI / 2.5;
+            group.add(ring);
+
+            holographicGroup.add(group);
+            activeHologramMesh = group;
+        }
+
+        function updateEnvironmentTheme(pageIdx) {
+            const theme = storyPages[pageIdx];
+            scene.background.setHex(theme.bgTint);
+            scene.fog.color.setHex(theme.bgTint);
+            ambientLight.color.setHex(theme.ambientColor);
+            pointLightCyan.color.setHex(theme.themeColor);
+            document.getElementById('hud-title').style.color = `#${theme.themeColor.toString(16).padStart(6, '0')}`;
+        }
+
+        function turnToPage(targetIndex) {
+            if (isAnimating || targetIndex === currentPage) return;
+            isAnimating = true;
+            currentPage = targetIndex;
+            updateUIState();
+            playPageSound();
+            updateHologramForPage(currentPage);
+            updateEnvironmentTheme(currentPage);
+            showNotification(storyPages[currentPage].title);
+
+            let duration = 850;
+            let startTime = performance.now();
+            let startRotations = pages.map(p => p.pivot.rotation.y);
+            let targetRotations = pages.map((p, idx) => {
+                if (currentPage === 0) return 0;
+                return idx < currentPage ? -Math.PI + (idx * 0.005) : 0;
+            });
+
+            function animateFlip(time) {
+                let elapsed = time - startTime;
+                let progress = Math.min(elapsed / duration, 1);
+                let ease = progress < 0.5 ? 2 * progress * progress : -1 + (4 - 2 * progress) * progress;
+
+                for (let i = 0; i < pages.length; i++) {
+                    let rot = startRotations[i] + (targetRotations[i] - startRotations[i]) * ease;
+                    pages[i].pivot.rotation.y = rot;
+                    pages[i].pivot.position.z = rot < -0.1 ? i * 0.12 : (storyPages.length - i) * 0.12;
+                }
+
+                if (progress < 1) {
+                    requestAnimationFrame(animateFlip);
+                } else {
+                    isAnimating = false;
+                }
+            }
+            requestAnimationFrame(animateFlip);
+        }
+
+        function updateBookStateImmediate(pageIdx) {
+            currentPage = pageIdx;
+            for (let i = 0; i < pages.length; i++) {
+                let rot = (currentPage > 0 && i < currentPage) ? -Math.PI + (i * 0.005) : 0;
+                pages[i].pivot.rotation.y = rot;
+                pages[i].pivot.position.z = rot < -0.1 ? i * 0.12 : (storyPages.length - i) * 0.12;
+            }
+            updateHologramForPage(currentPage);
+            updateEnvironmentTheme(currentPage);
+            updateUIState();
+        }
+
+        function setupUIEvents() {
+            document.getElementById('next-btn').addEventListener('click', () => {
+                if (currentPage < storyPages.length - 1) turnToPage(currentPage + 1);
+            });
+            document.getElementById('prev-btn').addEventListener('click', () => {
+                if (currentPage > 0) turnToPage(currentPage - 1);
+            });
+            document.getElementById('close-book-btn').addEventListener('click', () => {
+                turnToPage(0);
+                showNotification("Codex closed & sealed.");
+            });
+            document.getElementById('pulse-holo-btn').addEventListener('click', () => {
+                if (activeHologramMesh) {
+                    activeHologramMesh.scale.set(1.4, 1.4, 1.4);
+                    setTimeout(() => activeHologramMesh.scale.set(1, 1, 1), 400);
+                }
+                showNotification("Quantum planetary pulse activated!");
+                playPageSound();
+            });
+            document.getElementById('reset-view').addEventListener('click', resetCameraView);
+            document.getElementById('cinematic-guide-btn').addEventListener('click', toggleCinematicTour);
+            document.getElementById('sound-btn').addEventListener('click', toggleSound);
+
+            updateUIState();
+        }
+
+        function updateUIState() {
+            const ind = document.getElementById('page-indicator');
+            if (currentPage === 0) ind.textContent = "CODEX CLOSED (TAP TO OPEN)";
+            else if (currentPage === storyPages.length - 1) ind.textContent = "BACK COVER / TERMINUS";
+            else ind.textContent = `CHAPTER ${currentPage} OF 4`;
+            
+            document.getElementById('prev-btn').disabled = currentPage === 0;
+            document.getElementById('next-btn').disabled = currentPage >= storyPages.length - 1;
+        }
+
+        function showNotification(text) {
+            const box = document.getElementById('message-box');
+            document.getElementById('message-text').textContent = text;
+            box.classList.remove('hidden');
+            setTimeout(() => box.classList.add('hidden'), 2600);
+        }
+
+        function resetCameraView() {
+            cinematicTourActive = false;
+            document.getElementById('guide-text').textContent = "Cinematic Tour: Off";
+            if (window.innerWidth < 768) {
+                camera.position.set(0, 5.2, 11.0);
+            } else {
+                camera.position.set(0, 3.8, 8.8);
+            }
+            controls.target.set(0, 0.8, 0);
+            controls.update();
+            showNotification("Camera view re-calibrated.");
+        }
+
+        function toggleCinematicTour() {
+            cinematicTourActive = !cinematicTourActive;
+            const txt = document.getElementById('guide-text');
+            if (cinematicTourActive) {
+                txt.textContent = "Cinematic Tour: Active";
+                showNotification("Automated Universal Camera Guide engaged.");
+                tourTimer = performance.now();
+            } else {
+                txt.textContent = "Cinematic Tour: Off";
+                showNotification("Cinematic tour paused.");
+            }
+        }
+
+        function toggleSound() {
+            soundEnabled = !soundEnabled;
+            if (soundEnabled && !audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            document.getElementById('sound-text').textContent = soundEnabled ? "Audio: On" : "Audio: Off";
+        }
+
+        function playPageSound() {
+            if (!soundEnabled || !audioCtx) return;
+            try {
+                let osc = audioCtx.createOscillator();
+                let gain = audioCtx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(620, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(280, audioCtx.currentTime + 0.35);
+                gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.35);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.35);
+            } catch (e) {}
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function onPointerDown(e) {
+            pointerDownPos.x = e.clientX;
+            pointerDownPos.y = e.clientY;
+        }
+
+        function onPointerUp(e) {
+            if (Math.hypot(e.clientX - pointerDownPos.x, e.clientY - pointerDownPos.y) > 6) return;
+
+            mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(scene.children, true);
+
+            if (intersects.length > 0) {
+                // Check if user clicked on an orbiting planet in deep space
+                const hitPlanet = planets.find(p => p.mesh === intersects[0].object);
+                if (hitPlanet) {
+                    showNotification(`Warping to: ${hitPlanet.data.name}`);
+                    controls.target.copy(hitPlanet.mesh.position);
+                    camera.position.copy(hitPlanet.mesh.position).add(new THREE.Vector3(0, 1.8, 5));
+                    controls.update();
+                    turnToPage(hitPlanet.data.chapterIndex);
+                    return;
+                }
+
+                if (currentPage === 0) turnToPage(1);
+                else if (currentPage < storyPages.length - 1) turnToPage(currentPage + 1);
+                else turnToPage(0);
+            }
+        }
+
+        let clock = new THREE.Clock();
+
+        function animate() {
+            requestAnimationFrame(animate);
+            let time = clock.getElapsedTime();
+            controls.update();
+
+            planets.forEach(p => {
+                p.angle += p.data.speed * 0.006;
+                p.mesh.position.x = Math.cos(p.angle) * p.data.dist;
+                p.mesh.position.z = Math.sin(p.angle) * p.data.dist;
+                p.mesh.rotation.y = time * 0.25;
+            });
+
+            if (starField) {
+                const posArr = starGeo.attributes.position.array;
+                for (let i = 2; i < posArr.length; i += 3) {
+                    posArr[i] += 0.015;
+                    if (posArr[i] > 80) posArr[i] = -80;
+                }
+                starGeo.attributes.position.needsUpdate = true;
+            }
+
+            if (activeHologramMesh) {
+                activeHologramMesh.rotation.y = time * 0.5;
+                activeHologramMesh.position.y = 3.2 + Math.sin(time * 2.2) * 0.12;
+            }
+
+            if (cinematicTourActive) {
+                // Smoothly orbit around the planets and book automatically
+                let targetPlanet = planets[Math.floor((time * 0.1) % planets.length)];
+                controls.target.lerp(targetPlanet.mesh.position, 0.02);
+                camera.position.x = targetPlanet.mesh.position.x + Math.sin(time * 0.2) * 6;
+                camera.position.z = targetPlanet.mesh.position.z + Math.cos(time * 0.2) * 6;
+                camera.position.y = targetPlanet.mesh.position.y + 2.5;
+
+                if (performance.now() - tourTimer > 7000) {
+                    tourTimer = performance.now();
+                    let nextChap = (currentPage % (storyPages.length - 2)) + 1;
+                    turnToPage(nextChap);
+                }
+            }
+
+            if (bookGroup && !isAnimating && currentPage === 0) {
+                bookGroup.rotation.y = Math.sin(time * 0.4) * 0.05;
+            } else if (bookGroup) {
+                bookGroup.rotation.y = 0;
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>
